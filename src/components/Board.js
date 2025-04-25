@@ -1,103 +1,77 @@
 import React from 'react';
 import Cell from './Cell';
+import { db } from '../firebase';
+import { doc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
 
-function Board({ gameState, setGameState }) {
-  const handleCellClick = (index) => {
-    if (gameState.board[index] || !gameState.gameActive) return;
-
-    const newBoard = [...gameState.board];
-    newBoard[index] = gameState.currentPlayer;
-
-    let newPlayerXMarks = [...gameState.playerXMarks];
-    let newPlayerOMarks = [...gameState.playerOMarks];
-    let newMarkToRemoveIndex = null;
-    let winningLine = [];
-
-    if (gameState.currentPlayer === 'X') {
-      newPlayerXMarks.push(index);
-
-      if (newPlayerXMarks.length > 3) {
-        const removed = newPlayerXMarks.shift();
-        newBoard[removed] = null;
+function Board({ gameState, setGameState, playerSymbol, roomId }) {
+  React.useEffect(() => {
+    if (!roomId) return;
+    const roomRef = doc(db, 'rooms', roomId);
+    const unsubscribe = onSnapshot(roomRef, (docSnap) => {
+      const data = docSnap.data();
+      if (data) {
+        setGameState(prev => ({
+          ...prev,
+          board: data.board,
+          currentPlayer: data.currentPlayer,
+          gameActive: data.status === 'playing' || data.status === 'full',
+          showWinModal: data.status === 'finished',
+          winMessage: data.winner === 'draw'
+            ? "It's a draw!"
+            : data.winner ? `Player ${data.winner} wins!` : '',
+        }));
       }
+    });
 
-      if (newPlayerXMarks.length === 3) {
-        newMarkToRemoveIndex = newPlayerXMarks[0];
-      }
+    return () => unsubscribe();
+  }, [roomId, setGameState]);
 
-    } else {
-      newPlayerOMarks.push(index);
+  const handleCellClick = async (index) => {
+    if (!roomId || !playerSymbol) return;
+    if (gameState.board[index] !== null || gameState.currentPlayer !== playerSymbol) return;
+    if (!gameState.gameActive) return;
 
-      if (newPlayerOMarks.length > 3) {
-        const removed = newPlayerOMarks.shift();
-        newBoard[removed] = null;
-      }
+    const roomRef = doc(db, 'rooms', roomId);
+    const roomSnap = await getDoc(roomRef);
+    const data = roomSnap.data();
 
-      if (newPlayerOMarks.length === 3) {
-        newMarkToRemoveIndex = newPlayerOMarks[0];
-      }
-    }
+    const updatedBoard = [...data.board];
+    updatedBoard[index] = playerSymbol;
 
     const winPatterns = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8],
-      [0, 3, 6], [1, 4, 7], [2, 5, 8],
-      [0, 4, 8], [2, 4, 6]
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
     ];
 
-    let isWin = false;
-    for (const [a, b, c] of winPatterns) {
-      if (newBoard[a] && newBoard[a] === newBoard[b] && newBoard[a] === newBoard[c]) {
-        isWin = true;
-        winningLine = [a, b, c];
+    let winner = null;
+    for (const [a,b,c] of winPatterns) {
+      if (updatedBoard[a] && updatedBoard[a] === updatedBoard[b] && updatedBoard[a] === updatedBoard[c]) {
+        winner = updatedBoard[a];
         break;
       }
     }
 
-    const isDraw = newBoard.every(cell => cell !== null);
+    const isDraw = updatedBoard.every(cell => cell !== null);
 
-    setGameState(prev => ({
-      ...prev,
-      board: newBoard,
-      playerXMarks: newPlayerXMarks,
-      playerOMarks: newPlayerOMarks,
-      markToRemoveIndex: newMarkToRemoveIndex,
-      gameActive: !isWin && !isDraw,
-      currentPlayer: isWin || isDraw ? prev.currentPlayer : prev.currentPlayer === 'X' ? 'O' : 'X',
-      xScore: isWin && prev.currentPlayer === 'X' ? prev.xScore + 1 : prev.xScore,
-      oScore: isWin && prev.currentPlayer === 'O' ? prev.oScore + 1 : prev.oScore,
-      showWinModal: isWin || isDraw,
-      winMessage: isWin ? `Player ${prev.currentPlayer} wins!` : "It's a draw!",
-      winningLine: isWin ? winningLine : []
-    }));
+    await updateDoc(roomRef, {
+      board: updatedBoard,
+      currentPlayer: playerSymbol === 'X' ? 'O' : 'X',
+      status: winner || isDraw ? 'finished' : 'playing',
+      winner: winner || (isDraw ? 'draw' : null),
+    });
   };
 
   return (
-    <div className="board-container">
-      <div className="turn-indicator">
-        Player {gameState.currentPlayer}'s turn
-        <div
-          className={`warning ${
-            (gameState.currentPlayer === 'X' && gameState.playerXMarks.length >= 3) ||
-            (gameState.currentPlayer === 'O' && gameState.playerOMarks.length >= 3)
-              ? 'visible'
-              : 'hidden'
-          }`}
-        >
-          Your oldest mark will move when you place the next one!
-        </div>
-      </div>
-
-      <div className="board">
-        {gameState.board.map((cell, index) => (
-          <Cell
-            key={index}
-            value={cell}
-            isPulsing={index === gameState.markToRemoveIndex}
-            isWinner={gameState.winningLine.includes(index)}
-            onClick={() => handleCellClick(index)}
-          />
-        ))}
-      </div>
+    <div className="board">
+      {gameState.board.map((cell, index) => (
+        <Cell
+          key={index}
+          value={cell}
+          onClick={() => handleCellClick(index)}
+          isPulsing={index === gameState.markToRemoveIndex}
+        />
+      ))}
     </div>
   );
 }
