@@ -21,7 +21,7 @@ function Board({ gameState, setGameState, playerSymbol, roomId }) {
             : data.winner ? `Player ${data.winner} wins!` : '',
           playerXMarks: data.playerXMarks || [],
           playerOMarks: data.playerOMarks || [],
-          markToRemoveIndex: data.markToRemoveIndex || null
+          markToRemoveIndex: data.markToRemoveIndex ?? null
         }));
       }
     });
@@ -54,10 +54,10 @@ function Board({ gameState, setGameState, playerSymbol, roomId }) {
         playerXMarks: newPlayerXMarks,
         playerOMarks: newPlayerOMarks,
         markToRemoveIndex:
-        (prev.currentPlayer === 'X' && newPlayerXMarks.length === 3) ? newPlayerXMarks[0] :
-        (prev.currentPlayer === 'O' && newPlayerOMarks.length === 3) ? newPlayerOMarks[0] :
-        null,
-              currentPlayer: prev.currentPlayer === 'X' ? 'O' : 'X',
+          (prev.currentPlayer === 'X' && newPlayerXMarks.length === 3) ? newPlayerXMarks[0] :
+          (prev.currentPlayer === 'O' && newPlayerOMarks.length === 3) ? newPlayerOMarks[0] :
+          null,
+        currentPlayer: prev.currentPlayer === 'X' ? 'O' : 'X',
         gameActive: !winner && !isDraw,
         showWinModal: winner || isDraw,
         winMessage: winner ? `Player ${winner} wins!` : "It's a draw!"
@@ -136,25 +136,30 @@ function Board({ gameState, setGameState, playerSymbol, roomId }) {
       playerXMarks: newPlayerXMarks,
       playerOMarks: newPlayerOMarks,
       markToRemoveIndex:
-      (playerSymbol === 'X' && newPlayerXMarks.length === 3) ? newPlayerXMarks[0] :
-      (playerSymbol === 'O' && newPlayerOMarks.length === 3) ? newPlayerOMarks[0] :
-      null,
-          currentPlayer: playerSymbol === 'X' ? 'O' : 'X',
+        (playerSymbol === 'X' && newPlayerXMarks.length === 3) ? newPlayerXMarks[0] :
+        (playerSymbol === 'O' && newPlayerOMarks.length === 3) ? newPlayerOMarks[0] :
+        null,
+      currentPlayer: playerSymbol === 'X' ? 'O' : 'X',
       status: winner || isDraw ? 'finished' : 'playing',
       winner: winner || (isDraw ? 'draw' : null),
     });
   };
 
   return (
-    <div className="board">
-      {gameState.board.map((cell, index) => (
-        <Cell
-          key={index}
-          value={cell}
-          onClick={() => handleCellClick(index)}
-          isPulsing={index === gameState.markToRemoveIndex}
-        />
-      ))}
+    <div className="board-container">
+      {playerSymbol && (
+        <div className="you-are">YOU ARE {playerSymbol}</div>
+      )}
+      <div className="board">
+        {gameState.board.map((cell, index) => (
+          <Cell
+            key={index}
+            value={cell}
+            onClick={() => handleCellClick(index)}
+            isPulsing={index === gameState.markToRemoveIndex}
+          />
+        ))}
+      </div>
     </div>
   );
 }
