@@ -127,6 +127,7 @@ function App() {
                       if (data && data.playerO) {
                         setIsHosting(false);
                         setGameStarted(true);
+                        
                       }
                     });
                   }}
