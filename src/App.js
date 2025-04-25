@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Board from './components/Board';
 import GameInfo from './components/GameInfo';
 import Modals from './components/Modals';
+import TopInfo from './components/TopInfo';
+import Controls from './components/Controls';
+import HostJoinModals from './components/HostJoinModals';
 import './styles/App.css';
 import { db } from './firebase';
 import { doc, setDoc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
@@ -24,6 +27,10 @@ function App() {
     winMessage: ''
   });
 
+  const [localXScore, setLocalXScore] = useState(0);
+  const [localOScore, setLocalOScore] = useState(0);
+  const [onlineXScore, setOnlineXScore] = useState(0);
+  const [onlineOScore, setOnlineOScore] = useState(0);
   const [showHostModal, setShowHostModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [hostRoomId, setHostRoomId] = useState(nanoid(4).toUpperCase());
@@ -32,147 +39,189 @@ function App() {
   const [playerSymbol, setPlayerSymbol] = useState(null);
   const [roomId, setRoomId] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
+  const [opponentLeft, setOpponentLeft] = useState(false);
 
-  const resetBoard = () => {
-    const next = gameState.startingPlayer === 'X' ? 'O' : 'X';
-    setGameState({
-      ...gameState,
+  useEffect(() => {
+    if (!roomId) return;
+    const unsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
+      const data = docSnap.data();
+      if (!data) return;
+
+      if (data.status === 'left' && data.leftBy !== playerSymbol) {
+        setOpponentLeft(true);
+        setTimeout(() => {
+          leaveGameCleanup();
+        }, 2000);
+      }
+
+      if (data.rematchRequested) {
+        handleRematch(data.winner);
+      
+        updateDoc(doc(db, 'rooms', roomId), {
+          rematchRequested: null,
+          winner: null
+        });
+      }
+      
+    });
+    return () => unsub();
+  }, [roomId, playerSymbol]);
+
+  const leaveGameCleanup = () => {
+    setRoomId(null);
+    setPlayerSymbol(null);
+    setGameStarted(false);
+    setOpponentLeft(false);
+    resetBoardFull();
+  };
+
+  const resetBoardFull = () => {
+    setGameState(prev => ({
+      ...prev,
       board: Array(9).fill(null),
-      currentPlayer: next,
-      startingPlayer: next,
-      gameActive: true,
       playerXMarks: [],
       playerOMarks: [],
       markToRemoveIndex: null,
       winningLine: [],
       showRules: false,
       showWinModal: false,
-      winMessage: ''
-    });
+      winMessage: '',
+      gameActive: true
+    }));
+  };
+
+  const handleRematch = async (lastWinner) => {
+    const nextStarter = lastWinner === 'X' ? 'O' : 'X';
+    let newXScore = 0;
+    let newOScore = 0;
+
+    if (!roomId) {
+      newXScore = lastWinner === 'X' ? localXScore + 1 : localXScore;
+      newOScore = lastWinner === 'O' ? localOScore + 1 : localOScore;
+      setLocalXScore(newXScore);
+      setLocalOScore(newOScore);
+    } else {
+      newXScore = lastWinner === 'X' ? onlineXScore + 1 : onlineXScore;
+      newOScore = lastWinner === 'O' ? onlineOScore + 1 : onlineOScore;
+      setOnlineXScore(newXScore);
+      setOnlineOScore(newOScore);
+    }
+
+    if (roomId) {
+      await updateDoc(doc(db, 'rooms', roomId), {
+        rematchRequested: null,
+        board: Array(9).fill(null),
+        winner: null,
+        currentPlayer: nextStarter,
+        playerXMarks: [],
+        playerOMarks: [],
+        markToRemoveIndex: null
+      });
+    }
+
+    setGameState(prev => ({
+      ...prev,
+      board: Array(9).fill(null),
+      playerXMarks: [],
+      playerOMarks: [],
+      markToRemoveIndex: null,
+      winningLine: [],
+      winMessage: '',
+      showWinModal: false,
+      gameActive: true,
+      xScore: newXScore,
+      oScore: newOScore,
+      currentPlayer: nextStarter,
+      startingPlayer: nextStarter
+    }));
+  };
+
+  const handlePlayAgain = async () => {
+    if (roomId) {
+      const lastWinner = gameState.winMessage.includes('X') ? 'X' :
+                         gameState.winMessage.includes('O') ? 'O' : null;
+  
+      await updateDoc(doc(db, 'rooms', roomId), {
+        rematchRequested: true,
+        winner: lastWinner || null
+      });
+    } else {
+      const lastWinner = gameState.winMessage.includes('X') ? 'X' :
+                         gameState.winMessage.includes('O') ? 'O' : null;
+  
+      if (lastWinner === 'X') setLocalXScore(prev => prev + 1);
+      if (lastWinner === 'O') setLocalOScore(prev => prev + 1);
+  
+      resetBoardFull();
+    }
+  };
+  
+
+  const handleLeaveGame = async () => {
+    if (roomId) {
+      await updateDoc(doc(db, 'rooms', roomId), {
+        status: 'left',
+        leftBy: playerSymbol
+      });
+    }
+    leaveGameCleanup();
   };
 
   return (
     <div className="app-container">
       <div className="app">
-        <h1>Tic Tac Toe</h1>
-        <p>The classic game with a twist!</p>
+        <TopInfo
+          roomId={roomId}
+          localXScore={localXScore}
+          localOScore={localOScore}
+          onlineXScore={onlineXScore}
+          onlineOScore={onlineOScore}
+          gameState={gameState}
+          opponentLeft={opponentLeft}
+        />
 
-        {roomId && (
-          <p>Room Code: <strong style={{ color: '#0ff' }}>{roomId}</strong></p>
-        )}
+        <Board
+          gameState={gameState}
+          setGameState={setGameState}
+          playerSymbol={playerSymbol}
+          roomId={roomId}
+        />
 
-        <p>Player X: {gameState.xScore}</p>
-        <p>Player O: {gameState.oScore}</p>
-        <p className="turn-indicator">Player {gameState.currentPlayer}'s turn</p>
+        <Controls
+          gameStarted={gameStarted}
+          roomId={roomId}
+          resetBoardFull={resetBoardFull}
+          setGameState={setGameState}
+          setHostRoomId={() => setHostRoomId(nanoid(4).toUpperCase())}
+          setShowHostModal={setShowHostModal}
+          setJoinRoomId={setJoinRoomId}
+          setShowJoinModal={setShowJoinModal}
+          handleLeaveGame={handleLeaveGame}
+        />
 
-        <Board gameState={gameState} setGameState={setGameState} playerSymbol={playerSymbol} roomId={roomId} />
+        <Modals
+          gameState={{ ...gameState, roomId }}
+          setGameState={setGameState}
+          onPlayAgain={handlePlayAgain}
+          onLeaveGame={handleLeaveGame}
+        />
 
-        {!gameStarted && (
-          <div className="controls">
-            <button onClick={resetBoard}>New Game</button>
-            <button onClick={() => setGameState({ ...gameState, showRules: true })}>Show Rules</button>
-            <button onClick={() => {
-              setHostRoomId(nanoid(4).toUpperCase());
-              setShowHostModal(true);
-            }}>Host a Game</button>
-            <button onClick={() => {
-              setJoinRoomId('');
-              setShowJoinModal(true);
-            }}>Join a Game</button>
-            <button onClick={() => setGameState({ ...gameState, xScore: 0, oScore: 0 })}>Reset Points</button>
-          </div>
-        )}
-
-        <Modals gameState={gameState} setGameState={setGameState} />
-
-        {showHostModal && (
-          <div className="modal">
-            <div className="modal-content">
-              <h3>Host a new game</h3>
-              <input
-                value={hostRoomId}
-                onChange={(e) => setHostRoomId(e.target.value.toUpperCase())}
-                placeholder="Enter Room ID"
-              />
-              <p>
-                Enter an ID that people will use to join your game.{' '}
-                <span
-                  style={{ textDecoration: 'underline', cursor: 'pointer', color: '#0ff' }}
-                  onClick={() => setHostRoomId(nanoid(4).toUpperCase())}
-                >
-                  Use a random ID
-                </span>
-              </p>
-              <div className="modal-buttons">
-                <button
-                  onClick={async () => {
-                    const roomRef = doc(db, 'rooms', hostRoomId);
-                    await setDoc(roomRef, {
-                      board: Array(9).fill(null),
-                      currentPlayer: 'X',
-                      playerX: 'host',
-                      playerO: null,
-                      status: 'waiting',
-                      winner: null,
-                      private: false,
-                      createdAt: Date.now()
-                    });
-                    setRoomId(hostRoomId);
-                    setPlayerSymbol('X');
-                    setShowHostModal(false);
-                    setIsHosting(true);
-
-                    onSnapshot(roomRef, (docSnap) => {
-                      const data = docSnap.data();
-                      if (data && data.playerO) {
-                        setIsHosting(false);
-                        setGameStarted(true);
-                        
-                      }
-                    });
-                  }}
-                >
-                  Create Game
-                </button>
-                <button onClick={() => setShowHostModal(false)}>Cancel</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showJoinModal && (
-          <div className="modal">
-            <div className="modal-content">
-              <h3>Join an existing game</h3>
-              <input
-                value={joinRoomId}
-                onChange={(e) => setJoinRoomId(e.target.value.toUpperCase())}
-                placeholder="Type a game ID to join"
-              />
-              <p>To join an existing game, enter its ID and click Join.</p>
-              <div className="modal-buttons">
-                <button
-                  onClick={async () => {
-                    if (!joinRoomId) return;
-                    const roomRef = doc(db, 'rooms', joinRoomId);
-                    const roomSnap = await getDoc(roomRef);
-                    const data = roomSnap.data();
-                    if (!data) return alert('Room not found.');
-                    if (data.private) return alert('This room is private.');
-                    await updateDoc(roomRef, { playerO: 'guest', status: 'full' });
-                    setRoomId(joinRoomId);
-                    setPlayerSymbol('O');
-                    setShowJoinModal(false);
-                    setGameStarted(true);
-                  }}
-                >
-                  Join
-                </button>
-                <button onClick={() => setShowJoinModal(false)}>Cancel</button>
-              </div>
-            </div>
-          </div>
-        )}
+        <HostJoinModals
+          showHostModal={showHostModal}
+          showJoinModal={showJoinModal}
+          hostRoomId={hostRoomId}
+          setHostRoomId={setHostRoomId}
+          joinRoomId={joinRoomId}
+          setJoinRoomId={setJoinRoomId}
+          setRoomId={setRoomId}
+          setPlayerSymbol={setPlayerSymbol}
+          setShowHostModal={setShowHostModal}
+          setShowJoinModal={setShowJoinModal}
+          setOnlineXScore={setOnlineXScore}
+          setOnlineOScore={setOnlineOScore}
+          setIsHosting={setIsHosting}
+          setGameStarted={setGameStarted}
+        />
       </div>
     </div>
   );

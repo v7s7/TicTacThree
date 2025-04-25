@@ -1,52 +1,35 @@
 import React from 'react';
 
-function Modals({ gameState, setGameState }) {
+function Modals({ gameState, setGameState, onPlayAgain, onLeaveGame }) {
   return (
     <>
       {gameState.showRules && (
-        <div className="modal" onClick={() => setGameState(prev => ({ ...prev, showRules: false }))}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2>Game Rules</h2>
-            <ol className="rules-list">
-              <li>Players take turns placing X and O marks</li>
-              <li>After placing 3 marks, your oldest mark will blink</li>
-              <li>When placing the 4th mark, the oldest one moves to the new position</li>
-              <li>First to get 3 in a row wins</li>
-            </ol>
-            <button onClick={() => setGameState(prev => ({ ...prev, showRules: false }))}>
-              Got it
-            </button>
+        <div className="modal">
+          <div className="modal-content">
+            <h2>Rules</h2>
+            <ul className="rules-list">
+              <li>Each player can have only 3 active marks at any time.</li>
+              <li>Once a 4th mark is placed, the oldest mark disappears.</li>
+              <li>First player to align 3 of their marks wins.</li>
+            </ul>
+            <div className="modal-buttons">
+              <button onClick={() => setGameState(prev => ({ ...prev, showRules: false }))}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {gameState.showWinModal && (
-        <div className="modal" onClick={() => setGameState(prev => ({ ...prev, showWinModal: false }))}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2 className={gameState.winMessage.includes('X') ? 'X' : 'O'}>
-              {gameState.winMessage}
-            </h2>
+        <div className="modal">
+          <div className="modal-content">
+            <h2>{gameState.winMessage}</h2>
             <div className="modal-buttons">
-            <button onClick={() => {
-  const nextStartingPlayer = gameState.startingPlayer === 'X' ? 'O' : 'X';
-  setGameState(prev => ({
-    ...prev,
-    board: Array(9).fill(null),
-    currentPlayer: nextStartingPlayer,
-    startingPlayer: nextStartingPlayer,
-    gameActive: true,
-    playerXMarks: [],
-    playerOMarks: [],
-    markToRemoveIndex: null,
-    showWinModal: false
-  }));
-}}>
-
-                Play Again
-              </button>
-              <button onClick={() => setGameState(prev => ({ ...prev, showWinModal: false }))}>
-                Close
-              </button>
+              <button onClick={onPlayAgain}>Play Again</button>
+              {gameState.roomId && (
+                <button onClick={onLeaveGame}>Leave Game</button>
+              )}
             </div>
           </div>
         </div>
