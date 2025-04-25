@@ -8,13 +8,14 @@ function App() {
   const [gameState, setGameState] = useState({
     board: Array(9).fill(null),
     currentPlayer: 'X',
-    startingPlayer: 'X', 
+    startingPlayer: 'X',
     gameActive: true,
     xScore: 0,
     oScore: 0,
     playerXMarks: [],
     playerOMarks: [],
     markToRemoveIndex: null,
+    winningLine: [],
     showRules: false,
     showWinModal: false,
     winMessage: ''
@@ -25,25 +26,28 @@ function App() {
       <div className="app">
         <h1>Tic Tac Toe</h1>
         <p>The classic game with a twist!</p>
-        
+
         <div className="game-area">
           <GameInfo gameState={gameState} />
           <Board gameState={gameState} setGameState={setGameState} />
-          
+
           <div className="controls">
             <button onClick={() => setGameState(prev => ({ ...prev, showRules: true }))}>
               Show Rules
             </button>
             <button onClick={() => {
+              const nextStartingPlayer = gameState.startingPlayer === 'X' ? 'O' : 'X';
               setGameState({
                 board: Array(9).fill(null),
-                currentPlayer: 'X',
+                currentPlayer: nextStartingPlayer,
+                startingPlayer: nextStartingPlayer,
                 gameActive: true,
                 xScore: gameState.xScore,
                 oScore: gameState.oScore,
                 playerXMarks: [],
                 playerOMarks: [],
                 markToRemoveIndex: null,
+                winningLine: [],
                 showRules: false,
                 showWinModal: false,
                 winMessage: ''
@@ -53,7 +57,7 @@ function App() {
             </button>
           </div>
         </div>
-        
+
         <Modals gameState={gameState} setGameState={setGameState} />
       </div>
     </div>

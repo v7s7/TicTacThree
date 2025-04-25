@@ -1,10 +1,10 @@
 import React from 'react';
 
-function Cell({ value, isPulsing, onClick }) {
+function Cell({ value, isPulsing, isWinner, onClick }) {
   return (
     <div 
-    className={`cell ${value} ${isPulsing ? 'blink' : ''}`}
-    onClick={onClick}
+      className={`cell ${value} ${isPulsing ? 'blink' : ''} ${isWinner ? 'winner' : ''}`} 
+      onClick={onClick}
     >
       {value}
     </div>

@@ -7,7 +7,7 @@ function Modals({ gameState, setGameState }) {
         <div className="modal" onClick={() => setGameState(prev => ({ ...prev, showRules: false }))}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h2>Game Rules</h2>
-            <ol>
+            <ol className="rules-list">
               <li>Players take turns placing X and O marks</li>
               <li>After placing 3 marks, your oldest mark will blink</li>
               <li>When placing the 4th mark, the oldest one moves to the new position</li>

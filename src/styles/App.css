@@ -9,15 +9,26 @@ body {
   background-color: #121212;
   color: #ffffff;
 }
+.cell.winner {
+  border: 2px solid yellow;
+  box-shadow: 0 0 15px 4px rgba(255, 255, 0, 0.7);
+}
 
 .app-container {
-  width: 100%;
-  max-width: 500px;
+  width: 400px;
+  max-width: 100%;
+  margin: 0 auto;
   padding: 20px;
-  background: #1e1e1e;
-  border-radius: 16px;
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
+  box-sizing: border-box;
 }
+.rules-list {
+  list-style-position: inside;
+  text-align: left;
+  margin: 1rem 0;
+  padding-left: 0;
+  line-height: 1.6;
+}
+
 
 .app {
   text-align: center;
