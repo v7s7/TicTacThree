@@ -2,8 +2,9 @@ import React, { useEffect } from 'react';
 import Cell from './Cell';
 import { db } from '../firebase';
 import { doc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { soundManager } from '../utils/soundManager';
 
-function Board({ gameState, setGameState, playerSymbol, roomId }) {
+function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGameEnd }) {
   useEffect(() => {
     if (!roomId) return;
     const roomRef = doc(db, 'rooms', roomId);
@@ -31,6 +32,8 @@ function Board({ gameState, setGameState, playerSymbol, roomId }) {
   const handleCellClick = async (index) => {
     if (!gameState.gameActive || gameState.board[index]) return;
 
+    soundManager.playMove();
+
     const updateLocalState = (updatedBoard, newPlayerXMarks, newPlayerOMarks) => {
       const winPatterns = [
         [0,1,2],[3,4,5],[6,7,8],
@@ -39,14 +42,21 @@ function Board({ gameState, setGameState, playerSymbol, roomId }) {
       ];
 
       let winner = null;
-      for (const [a,b,c] of winPatterns) {
+      let winningLine = [];
+      for (const pattern of winPatterns) {
+        const [a,b,c] = pattern;
         if (updatedBoard[a] && updatedBoard[a] === updatedBoard[b] && updatedBoard[a] === updatedBoard[c]) {
           winner = updatedBoard[a];
+          winningLine = pattern;
           break;
         }
       }
 
-      const isDraw = updatedBoard.every(cell => cell !== null);
+      const isDraw = !winner && updatedBoard.every(cell => cell !== null);
+
+      if (onGameEnd) {
+        onGameEnd(winner, isDraw);
+      }
 
       setGameState(prev => ({
         ...prev,
@@ -60,11 +70,12 @@ function Board({ gameState, setGameState, playerSymbol, roomId }) {
         currentPlayer: prev.currentPlayer === 'X' ? 'O' : 'X',
         gameActive: !winner && !isDraw,
         showWinModal: winner || isDraw,
-        winMessage: winner ? `Player ${winner} wins!` : "It's a draw!"
+        winMessage: winner ? `Player ${winner} wins!` : isDraw ? "It's a draw!" : '',
+        winningLine: winningLine
       }));
     };
 
-    if (!roomId) {
+    if (!roomId || gameMode === 'bot' || gameMode === 'local') {
       const updatedBoard = [...gameState.board];
       updatedBoard[index] = gameState.currentPlayer;
 

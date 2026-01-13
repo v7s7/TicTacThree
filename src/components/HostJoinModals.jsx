@@ -3,8 +3,8 @@ import { nanoid } from 'nanoid';
 import { db } from '../firebase';
 import { doc, setDoc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
-function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomId, joinRoomId, setJoinRoomId, setRoomId, setPlayerSymbol, setShowHostModal, setShowJoinModal, setOnlineXScore, setOnlineOScore, setIsHosting, setGameStarted }) {
-  
+function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomId, joinRoomId, setJoinRoomId, setRoomId, setPlayerSymbol, setShowHostModal, setShowJoinModal, setOnlineXScore, setOnlineOScore, setGameStarted, setGameMode }) {
+
   const handleCreateGame = async () => {
     const roomRef = doc(db, 'rooms', hostRoomId);
     await setDoc(roomRef, {
@@ -15,19 +15,21 @@ function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomI
       status: 'waiting',
       winner: null,
       private: false,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      playerXMarks: [],
+      playerOMarks: [],
+      markToRemoveIndex: null
     });
     setRoomId(hostRoomId);
     setPlayerSymbol('X');
     setShowHostModal(false);
     setOnlineXScore(0);
     setOnlineOScore(0);
-    setIsHosting(true);
+    if (setGameMode) setGameMode('online');
 
     onSnapshot(roomRef, (docSnap) => {
       const data = docSnap.data();
       if (data && data.playerO) {
-        setIsHosting(false);
         setGameStarted(true);
       }
     });
@@ -48,6 +50,7 @@ function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomI
     setOnlineXScore(0);
     setOnlineOScore(0);
     setGameStarted(true);
+    if (setGameMode) setGameMode('online');
   };
 
   return (
