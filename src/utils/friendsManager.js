@@ -12,9 +12,17 @@ import {
   deleteDoc,
   arrayUnion,
   arrayRemove,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot
 } from 'firebase/firestore';
 import { nanoid } from 'nanoid';
+
+const defaultRivalryStats = () => ({ wins: 0, losses: 0, draws: 0, lastPlayed: null, lastResult: null });
+const invertOutcome = (outcome) => {
+  if (outcome === 'win') return 'loss';
+  if (outcome === 'loss') return 'win';
+  return 'draw';
+};
 
 // Send friend request
 export const sendFriendRequest = async (fromUserId, toDisplayName, fromDisplayName) => {
@@ -126,7 +134,9 @@ export const getFriendRequests = async (userId) => {
 export const getFriendsList = async (userId) => {
   try {
     const userDoc = await getDoc(doc(db, 'users', userId));
-    const friendIds = userDoc.data()?.friends || [];
+    const userData = userDoc.data() || {};
+    const friendIds = userData.friends || [];
+    const rivalries = userData.rivalries || {};
 
     if (friendIds.length === 0) {
       return { success: true, friends: [] };
@@ -136,9 +146,14 @@ export const getFriendsList = async (userId) => {
     for (const friendId of friendIds) {
       const friendDoc = await getDoc(doc(db, 'users', friendId));
       if (friendDoc.exists()) {
+        const rivalryStats = rivalries[friendId] || defaultRivalryStats();
         friends.push({
           id: friendId,
-          ...friendDoc.data()
+          ...friendDoc.data(),
+          rivalry: {
+            ...defaultRivalryStats(),
+            ...rivalryStats
+          }
         });
       }
     }
@@ -148,6 +163,82 @@ export const getFriendsList = async (userId) => {
     console.error('Error getting friends list:', error);
     return { success: false, error: error.message, friends: [] };
   }
+};
+
+export const updateHeadToHeadForFriends = async (userId, friendId, outcomeForUser) => {
+  try {
+    if (!userId || !friendId || userId === friendId) return { success: false, error: 'Invalid IDs' };
+
+    const userRef = doc(db, 'users', userId);
+    const friendRef = doc(db, 'users', friendId);
+    const [userSnap, friendSnap] = await Promise.all([getDoc(userRef), getDoc(friendRef)]);
+
+    if (!userSnap.exists() || !friendSnap.exists()) {
+      return { success: false, error: 'User not found' };
+    }
+
+    const userData = userSnap.data() || {};
+    const friendData = friendSnap.data() || {};
+    const userFriends = userData.friends || [];
+    const friendFriends = friendData.friends || [];
+
+    // Only record rivalry stats when they are actually friends
+    if (!userFriends.includes(friendId) || !friendFriends.includes(userId)) {
+      return { success: false, skipped: true };
+    }
+
+    const now = Date.now();
+    const userRivalry = { ...defaultRivalryStats(), ...(userData.rivalries?.[friendId] || {}) };
+    const friendRivalry = { ...defaultRivalryStats(), ...(friendData.rivalries?.[userId] || {}) };
+
+    const applyOutcome = (rivalry, outcome) => {
+      if (outcome === 'win') rivalry.wins += 1;
+      else if (outcome === 'loss') rivalry.losses += 1;
+      else rivalry.draws += 1;
+      rivalry.lastPlayed = now;
+      rivalry.lastResult = outcome;
+      return rivalry;
+    };
+
+    applyOutcome(userRivalry, outcomeForUser);
+    applyOutcome(friendRivalry, invertOutcome(outcomeForUser));
+
+    await Promise.all([
+      updateDoc(userRef, { [`rivalries.${friendId}`]: userRivalry }),
+      updateDoc(friendRef, { [`rivalries.${userId}`]: friendRivalry })
+    ]);
+
+    return { success: true, userRivalry, friendRivalry };
+  } catch (error) {
+    console.error('Error updating head-to-head:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const listenFriendRequests = (userId, callback) => {
+  if (!userId) return () => {};
+  const q = query(
+    collection(db, 'friend_requests'),
+    where('to', '==', userId),
+    where('status', '==', 'pending')
+  );
+  return onSnapshot(q, (snapshot) => {
+    const requests = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    callback(requests);
+  });
+};
+
+export const listenGameInvites = (userId, callback) => {
+  if (!userId) return () => {};
+  const q = query(
+    collection(db, 'game_invites'),
+    where('to', '==', userId),
+    where('status', '==', 'pending')
+  );
+  return onSnapshot(q, (snapshot) => {
+    const invites = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    callback(invites);
+  });
 };
 
 // Remove friend

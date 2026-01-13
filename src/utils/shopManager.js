@@ -23,28 +23,34 @@ export const SHOP_ITEMS = {
       id: 'frame_rainbow',
       name: 'Rainbow Frame',
       type: 'frame',
-      price: 250,
+      price: 400,
       color: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
       description: 'Animated rainbow effect',
-      image: 'rainbow'
+      image: 'rainbow',
+      animated: true,
+      rankRequired: 'Gold'
     },
     {
       id: 'frame_fire',
       name: 'Fire Frame',
       type: 'frame',
-      price: 300,
+      price: 350,
       color: '#ff4500',
       description: 'Blazing fire effect',
-      image: 'fire'
+      image: 'fire',
+      animated: true,
+      rankRequired: 'Platinum'
     },
     {
       id: 'frame_ice',
       name: 'Ice Frame',
       type: 'frame',
-      price: 300,
+      price: 320,
       color: '#00f5ff',
       description: 'Frozen ice effect',
-      image: 'ice'
+      image: 'ice',
+      animated: false,
+      rankRequired: 'Gold'
     },
     {
       id: 'frame_diamond',
@@ -53,7 +59,9 @@ export const SHOP_ITEMS = {
       price: 500,
       color: '#b9f2ff',
       description: 'Rare diamond border',
-      image: 'diamond'
+      image: 'diamond',
+      animated: true,
+      rankRequired: 'Diamond'
     }
   ],
   avatarBackgrounds: [
@@ -97,10 +105,12 @@ export const SHOP_ITEMS = {
       id: 'bg_galaxy',
       name: 'Galaxy',
       type: 'background',
-      price: 200,
+      price: 240,
       color: '#1a1a2e',
       description: 'Starry galaxy background',
-      image: 'galaxy'
+      image: 'galaxy',
+      animated: false,
+      rankRequired: 'Silver'
     }
   ]
 };

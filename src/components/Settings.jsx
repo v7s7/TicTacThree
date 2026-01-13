@@ -10,7 +10,7 @@ import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { soundManager } from '../utils/soundManager';
 
-function Settings({ soundEnabled, onToggleSound, onResetData, onClose, user, onSignOut, userAvatar, onAvatarUpdate }) {
+function Settings({ soundEnabled, onToggleSound, onResetData, onClose, user, onSignOut, userAvatar, onOpenShop }) {
   const [newDisplayName, setNewDisplayName] = useState('');
   const [changingName, setChangingName] = useState(false);
   const [nameError, setNameError] = useState('');
@@ -98,12 +98,12 @@ function Settings({ soundEnabled, onToggleSound, onResetData, onClose, user, onS
                 </div>
               </div>
 
-              {onAvatarUpdate && (
+              {onOpenShop && (
                 <button
                   className="customize-btn"
                   onClick={() => {
                     soundManager.playClick();
-                    onAvatarUpdate();
+                    onOpenShop();
                   }}
                 >
                   Customize Avatar (Shop)

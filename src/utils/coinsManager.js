@@ -11,10 +11,12 @@ export const COIN_REWARDS = {
   bot_easy: 10,
   bot_medium: 25,
   bot_hard: 50,
-  local: 5,
+  local: 0,
   online: 30,
   draw: 5
 };
+
+const BOT_COIN_LIMIT = 100;
 
 // Get current coins from localStorage
 export const getCoins = () => {
@@ -49,8 +51,7 @@ export const spendCoins = (amount) => {
 
 // Get user stats
 export const getStats = () => {
-  const stats = localStorage.getItem(STATS_KEY);
-  return stats ? JSON.parse(stats) : {
+  const defaults = {
     gamesPlayed: 0,
     gamesWon: 0,
     gamesLost: 0,
@@ -58,34 +59,54 @@ export const getStats = () => {
     botGamesWon: { easy: 0, medium: 0, hard: 0 },
     onlineGamesWon: 0,
     totalCoinsEarned: 0,
+    botCoinsEarned: 0,
     winStreak: 0,
     bestWinStreak: 0
   };
+
+  const stats = localStorage.getItem(STATS_KEY);
+  if (!stats) return defaults;
+
+  try {
+    const parsed = JSON.parse(stats);
+    return {
+      ...defaults,
+      ...parsed,
+      botGamesWon: { ...defaults.botGamesWon, ...(parsed.botGamesWon || {}) },
+      botCoinsEarned: parsed.botCoinsEarned ?? defaults.botCoinsEarned
+    };
+  } catch (e) {
+    return defaults;
+  }
 };
 
 // Update stats
 export const updateStats = (result, gameMode, difficulty = null) => {
   const stats = getStats();
+  const isOnline = gameMode === 'online';
 
-  stats.gamesPlayed++;
+  // Only count competitive stats (wins/losses/draws/streak) for online games
+  if (isOnline) {
+    stats.gamesPlayed++;
 
-  if (result === 'win') {
-    stats.gamesWon++;
-    stats.winStreak++;
-    if (stats.winStreak > stats.bestWinStreak) {
-      stats.bestWinStreak = stats.winStreak;
-    }
-
-    if (gameMode === 'bot' && difficulty) {
-      stats.botGamesWon[difficulty] = (stats.botGamesWon[difficulty] || 0) + 1;
-    } else if (gameMode === 'online') {
+    if (result === 'win') {
+      stats.gamesWon++;
+      stats.winStreak++;
+      if (stats.winStreak > stats.bestWinStreak) {
+        stats.bestWinStreak = stats.winStreak;
+      }
       stats.onlineGamesWon++;
+    } else if (result === 'loss') {
+      stats.gamesLost++;
+      stats.winStreak = 0;
+    } else if (result === 'draw') {
+      stats.gamesDraw++;
     }
-  } else if (result === 'loss') {
-    stats.gamesLost++;
-    stats.winStreak = 0;
-  } else if (result === 'draw') {
-    stats.gamesDraw++;
+  }
+
+  // Track bot victories separately without affecting competitive counters
+  if (gameMode === 'bot' && result === 'win' && difficulty) {
+    stats.botGamesWon[difficulty] = (stats.botGamesWon[difficulty] || 0) + 1;
   }
 
   localStorage.setItem(STATS_KEY, JSON.stringify(stats));
@@ -95,6 +116,7 @@ export const updateStats = (result, gameMode, difficulty = null) => {
 // Award coins for game result
 export const awardCoins = (result, gameMode, difficulty = null) => {
   let coinsToAdd = 0;
+  const stats = getStats();
 
   if (result === 'win') {
     if (gameMode === 'bot') {
@@ -102,20 +124,33 @@ export const awardCoins = (result, gameMode, difficulty = null) => {
     } else if (gameMode === 'online') {
       coinsToAdd = COIN_REWARDS.online;
     } else {
-      coinsToAdd = COIN_REWARDS.local;
+      coinsToAdd = 0; // local wins give zero
     }
   } else if (result === 'draw') {
-    coinsToAdd = COIN_REWARDS.draw;
+    coinsToAdd = gameMode === 'local' ? 0 : COIN_REWARDS.draw;
+  }
+
+  // Cap lifetime bot earnings to BOT_COIN_LIMIT
+  if (gameMode === 'bot') {
+    const remaining = Math.max(0, BOT_COIN_LIMIT - (stats.botCoinsEarned || 0));
+    coinsToAdd = Math.min(coinsToAdd, remaining);
   }
 
   if (coinsToAdd > 0) {
     const newCoins = addCoins(coinsToAdd);
-    const stats = getStats();
-    stats.totalCoinsEarned += coinsToAdd;
-    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+    const updatedStats = {
+      ...stats,
+      totalCoinsEarned: (stats.totalCoinsEarned || 0) + coinsToAdd,
+      botCoinsEarned: gameMode === 'bot'
+        ? (stats.botCoinsEarned || 0) + coinsToAdd
+        : (stats.botCoinsEarned || 0)
+    };
+    localStorage.setItem(STATS_KEY, JSON.stringify(updatedStats));
     return { coinsAdded: coinsToAdd, totalCoins: newCoins };
   }
 
+  // Persist stats even if no coins added (to keep defaults applied)
+  localStorage.setItem(STATS_KEY, JSON.stringify(stats));
   return { coinsAdded: 0, totalCoins: getCoins() };
 };
 
