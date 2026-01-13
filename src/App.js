@@ -5,6 +5,8 @@ import TopInfo from './components/TopInfo';
 import Controls from './components/Controls';
 import HostJoinModals from './components/HostJoinModals';
 import HomeScreen from './components/HomeScreen';
+import Auth from './components/Auth';
+import OnlineMatchmaking from './components/OnlineMatchmaking';
 import Settings from './components/Settings';
 import StatsModal from './components/StatsModal';
 import Leaderboard from './components/Leaderboard';
@@ -16,8 +18,22 @@ import { nanoid } from 'nanoid';
 import { getBotMove } from './utils/botAI';
 import { getCoins, getStats, awardCoins, updateStats, resetAllData } from './utils/coinsManager';
 import { soundManager } from './utils/soundManager';
+import {
+  onAuthStateChange,
+  signOutUser,
+  getCurrentUserId,
+  isGuest as checkIsGuest,
+  getUserData,
+  updateUserCoins,
+  syncGuestDataToUser
+} from './utils/authManager';
+import { leaveQueue } from './utils/matchmaking';
 
 function App() {
+  // Auth state
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   const [gameState, setGameState] = useState({
     board: Array(9).fill(null),
     currentPlayer: 'X',
@@ -34,7 +50,7 @@ function App() {
     winMessage: ''
   });
 
-  // Game mode: 'home', 'local', 'bot', 'online'
+  // Game mode: 'home', 'local', 'bot', 'online', 'matchmaking'
   const [gameMode, setGameMode] = useState('home');
   const [botDifficulty, setBotDifficulty] = useState(null);
 
@@ -66,6 +82,34 @@ function App() {
 
   // Bot state
   const [isBotThinking, setIsBotThinking] = useState(false);
+
+  // Auth listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChange(async (firebaseUser) => {
+      setUser(firebaseUser);
+      setAuthLoading(false);
+
+      // Load coins from Firestore for authenticated users
+      if (firebaseUser && !firebaseUser.isAnonymous) {
+        const userData = await getUserData(firebaseUser.uid);
+        if (userData.success) {
+          setCoins(userData.data.coins || 0);
+        }
+      } else {
+        // Load from localStorage for guests
+        setCoins(getCoins());
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Sync coins to Firestore for authenticated users
+  useEffect(() => {
+    if (user && !checkIsGuest(user)) {
+      updateUserCoins(user.uid, coins);
+    }
+  }, [coins, user]);
 
   // Online game listeners
   useEffect(() => {
@@ -179,7 +223,11 @@ function App() {
     }));
   };
 
-  const leaveGameCleanup = () => {
+  const leaveGameCleanup = async () => {
+    // Leave matchmaking queue if in it
+    if (user) {
+      await leaveQueue(getCurrentUserId(user));
+    }
     setRoomId(null);
     setPlayerSymbol(null);
     setGameStarted(false);
@@ -284,10 +332,13 @@ function App() {
     leaveGameCleanup();
   };
 
-  const handleBackToHome = () => {
+  const handleBackToHome = async () => {
     soundManager.playClick();
     if (gameMode === 'online' && roomId) {
       handleLeaveGame();
+    } else if (gameMode === 'matchmaking' && user) {
+      await leaveQueue(getCurrentUserId(user));
+      setGameMode('home');
     } else {
       setGameMode('home');
       resetBoardFull();
@@ -299,17 +350,18 @@ function App() {
 
   const handleSelectMode = (mode, difficulty = null) => {
     soundManager.playClick();
-    setGameMode(mode);
 
     if (mode === 'bot') {
       setBotDifficulty(difficulty);
+      setGameMode('bot');
       resetBoardFull();
     } else if (mode === 'local') {
+      setGameMode('local');
       resetBoardFull();
       setLocalXScore(0);
       setLocalOScore(0);
     } else if (mode === 'online') {
-      setShowHostModal(true);
+      setGameMode('matchmaking');
     }
   };
 
@@ -341,6 +393,52 @@ function App() {
   const handleShowSettings = () => {
     soundManager.playClick();
     setShowSettings(true);
+  };
+
+  const handleAuthSuccess = async (firebaseUser) => {
+    soundManager.playCoin();
+
+    // Sync guest data if transitioning from guest
+    const guestCoins = getCoins();
+    const guestStats = getStats();
+    if (guestCoins > 0 || guestStats.totalGames > 0) {
+      await syncGuestDataToUser(firebaseUser, guestCoins, guestStats);
+    }
+
+    setUser(firebaseUser);
+  };
+
+  const handleContinueAsGuest = () => {
+    soundManager.playClick();
+    setAuthLoading(false);
+  };
+
+  const handleSignOut = async () => {
+    soundManager.playClick();
+    await signOutUser();
+    setUser(null);
+    setCoins(getCoins());
+  };
+
+  const handleMatchFound = (matchData) => {
+    setRoomId(matchData.roomId);
+    setPlayerSymbol(matchData.playerSymbol);
+    setGameStarted(true);
+    setGameMode('online');
+    setOnlineXScore(0);
+    setOnlineOScore(0);
+  };
+
+  const handleCreateRoom = () => {
+    setShowHostModal(true);
+  };
+
+  const handleJoinRoom = () => {
+    setShowJoinModal(true);
+  };
+
+  const handleCancelMatchmaking = () => {
+    setGameMode('home');
   };
 
   // Handle win/loss/draw for player moves
@@ -386,9 +484,30 @@ function App() {
     }
   }, [gameMode, botDifficulty, playerSymbol]);
 
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="app-container">
+        <div className="app" style={{ paddingTop: '50px' }}>
+          <h2>Loading...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth screen if not authenticated and not guest
+  if (!user && !authLoading) {
+    return (
+      <Auth
+        onAuthSuccess={handleAuthSuccess}
+        onContinueAsGuest={handleContinueAsGuest}
+      />
+    );
+  }
+
   return (
     <div className="app-container">
-      {gameMode !== 'home' && (
+      {gameMode !== 'home' && gameMode !== 'matchmaking' && (
         <CoinDisplay coins={coins} coinsEarned={coinsEarned} />
       )}
 
@@ -400,6 +519,17 @@ function App() {
             onShowSettings={handleShowSettings}
             onShowStats={handleShowStats}
             onShowLeaderboard={handleShowLeaderboard}
+            user={user}
+            onSignOut={handleSignOut}
+          />
+        ) : gameMode === 'matchmaking' ? (
+          <OnlineMatchmaking
+            userId={getCurrentUserId(user)}
+            displayName={user?.displayName || 'Guest'}
+            onMatchFound={handleMatchFound}
+            onCancel={handleCancelMatchmaking}
+            onCreateRoom={handleCreateRoom}
+            onJoinRoom={handleJoinRoom}
           />
         ) : (
           <>

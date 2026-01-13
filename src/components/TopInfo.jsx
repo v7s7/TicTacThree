@@ -23,10 +23,17 @@ function TopInfo({ roomId, localXScore, localOScore, onlineXScore, onlineOScore,
     return null;
   };
 
+  const getGameModeTitle = () => {
+    if (gameMode === 'bot') return 'VS BOT';
+    if (gameMode === 'local') return 'LOCAL 1V1';
+    if (gameMode === 'online') return 'ONLINE MULTIPLAYER';
+    return 'TICTACTHREE';
+  };
+
   return (
     <>
       <h1 style={{ fontSize: '2rem', marginBottom: '5px' }}>
-        {gameMode === 'bot' ? '🤖 vs Bot' : gameMode === 'local' ? '👥 Local 1v1' : '🌐 Online 1v1'}
+        {getGameModeTitle()}
       </h1>
 
       {gameMode === 'bot' && botDifficulty && (

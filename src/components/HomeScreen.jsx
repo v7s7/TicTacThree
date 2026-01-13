@@ -1,16 +1,29 @@
 import React from 'react';
 import { DIFFICULTY_INFO } from '../utils/botAI';
 
-function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLeaderboard }) {
+function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLeaderboard, user, onSignOut }) {
   return (
     <div className="home-screen">
       <div className="home-header">
+        <div className="user-info">
+          {user && !user.isAnonymous ? (
+            <div className="logged-in-user">
+              <span className="user-name">{user.displayName || user.email}</span>
+              <button className="sign-out-btn" onClick={onSignOut}>Sign Out</button>
+            </div>
+          ) : (
+            <div className="guest-user">
+              <span className="guest-badge">Guest Mode</span>
+            </div>
+          )}
+        </div>
+
         <h1 className="game-title">TicTacThree</h1>
         <p className="game-subtitle">Only 3 Marks Rule!</p>
       </div>
 
       <div className="coin-display-large">
-        <span className="coin-icon">🪙</span>
+        <span className="coin-label">Coins:</span>
         <span className="coin-amount">{coins}</span>
       </div>
 
@@ -20,7 +33,7 @@ function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLe
         <div className="mode-grid">
           {/* Bot Mode */}
           <div className="mode-card">
-            <div className="mode-icon">🤖</div>
+            <div className="mode-icon-text">BOT</div>
             <h3>Play vs Bot</h3>
             <p>Challenge AI opponents</p>
             <div className="difficulty-buttons">
@@ -32,7 +45,7 @@ function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLe
                   onClick={() => onSelectMode('bot', key)}
                 >
                   <span className="difficulty-label">{info.label}</span>
-                  <span className="coin-reward">+{info.coinReward} 🪙</span>
+                  <span className="coin-reward">+{info.coinReward} coins</span>
                 </button>
               ))}
             </div>
@@ -40,31 +53,31 @@ function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLe
 
           {/* Local Mode */}
           <div className="mode-card" onClick={() => onSelectMode('local')}>
-            <div className="mode-icon">👥</div>
+            <div className="mode-icon-text">1v1</div>
             <h3>Local 1v1</h3>
-            <p>Play with a friend</p>
-            <div className="coin-reward-small">+5 🪙 per win</div>
+            <p>Play with a friend locally</p>
+            <div className="coin-reward-small">+5 coins per win</div>
           </div>
 
           {/* Online Mode */}
           <div className="mode-card" onClick={() => onSelectMode('online')}>
-            <div className="mode-icon">🌐</div>
-            <h3>Online 1v1</h3>
-            <p>Play online multiplayer</p>
-            <div className="coin-reward-small">+30 🪙 per win</div>
+            <div className="mode-icon-text">ONLINE</div>
+            <h3>Online Multiplayer</h3>
+            <p>Play against players worldwide</p>
+            <div className="coin-reward-small">+30 coins per win</div>
           </div>
         </div>
       </div>
 
       <div className="home-footer">
         <button className="footer-btn" onClick={onShowStats}>
-          📊 Stats
+          Stats
         </button>
         <button className="footer-btn" onClick={onShowLeaderboard}>
-          🏆 Leaderboard
+          Leaderboard
         </button>
         <button className="footer-btn" onClick={onShowSettings}>
-          ⚙️ Settings
+          Settings
         </button>
       </div>
     </div>
