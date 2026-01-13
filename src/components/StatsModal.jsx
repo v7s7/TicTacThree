@@ -18,37 +18,37 @@ function StatsModal({ stats, coins, onClose }) {
 
           <div className="stat-card">
             <div className="stat-value">{stats.gamesPlayed}</div>
-            <div className="stat-label">Games Played</div>
+            <div className="stat-label">Online Games Played</div>
           </div>
 
           <div className="stat-card">
             <div className="stat-value">{stats.gamesWon}</div>
-            <div className="stat-label">Games Won</div>
+            <div className="stat-label">Online Wins</div>
           </div>
 
           <div className="stat-card">
             <div className="stat-value">{winRate}%</div>
-            <div className="stat-label">Win Rate</div>
+            <div className="stat-label">Online Win Rate</div>
           </div>
 
           <div className="stat-card">
             <div className="stat-value">{stats.gamesLost}</div>
-            <div className="stat-label">Games Lost</div>
+            <div className="stat-label">Online Losses</div>
           </div>
 
           <div className="stat-card">
             <div className="stat-value">{stats.gamesDraw}</div>
-            <div className="stat-label">Draws</div>
+            <div className="stat-label">Online Draws</div>
           </div>
 
           <div className="stat-card">
             <div className="stat-value">{stats.winStreak}</div>
-            <div className="stat-label">Current Streak</div>
+            <div className="stat-label">Current Online Streak</div>
           </div>
 
           <div className="stat-card">
             <div className="stat-value">{stats.bestWinStreak}</div>
-            <div className="stat-label">Best Streak</div>
+            <div className="stat-label">Best Online Streak</div>
           </div>
         </div>
 

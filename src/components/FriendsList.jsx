@@ -121,7 +121,15 @@ function FriendsList({ onClose, user, onJoinGame }) {
     const result = await acceptGameInvite(invite.id);
     if (result.success) {
       soundManager.playCoin();
-      onJoinGame(result.roomId, 'O');
+      // Join as O (invitee). Provide names for in-game UI.
+      onJoinGame({
+        roomId: result.roomId,
+        playerSymbol: 'O',
+        opponentId: invite.from,
+        playerXName: invite.fromDisplayName || 'Friend',
+        playerOName: user?.displayName || 'You'
+      });
+      setGameInvites((prev) => prev.filter((i) => i.id !== invite.id));
       onClose();
     }
   };
@@ -129,29 +137,70 @@ function FriendsList({ onClose, user, onJoinGame }) {
   const handleDeclineInvite = async (invite) => {
     soundManager.playClick();
     await declineGameInvite(invite.id, invite.roomId);
-    loadGameInvites();
+    setGameInvites((prev) => prev.filter((i) => i.id !== invite.id));
   };
+
+  const renderAvatar = (name, photoUrl) => {
+    const letter = name?.[0]?.toUpperCase() || '?';
+    if (photoUrl) {
+      return (
+        <div
+          className="friend-avatar with-photo"
+          style={{ backgroundImage: `url(${photoUrl})` }}
+          aria-label={name}
+        />
+      );
+    }
+    return (
+      <div className="friend-avatar" aria-label={name}>
+        {letter}
+      </div>
+    );
+  };
+
+  const totalFriends = friends.length;
+  const totalRequests = requests.length;
+  const totalInvites = gameInvites.length;
 
   return (
     <div className="modal">
       <div className="modal-content friends-modal">
-        <h2>FRIENDS</h2>
+        <div className="friends-header">
+          <div>
+            <h2>Friends</h2>
+            <p className="friends-subtitle">Manage invites, requests, and 1v1s</p>
+          </div>
+          <div className="friends-pills">
+            <span className="friends-pill">Friends: {totalFriends}</span>
+            <span className="friends-pill alert">Requests: {totalRequests}</span>
+            <span className="friends-pill success">Invites: {totalInvites}</span>
+          </div>
+        </div>
 
         {message && <div className="friends-message">{message}</div>}
 
         {gameInvites.length > 0 && (
           <div className="friends-section">
-            <h3>Game Invites</h3>
+            <div className="section-title-row">
+              <h3>Game Invites</h3>
+              <span className="section-chip success">Ready to join</span>
+            </div>
             <div className="friends-list">
               {gameInvites.map((invite) => (
-                <div key={invite.id} className="friend-item invite">
-                  <span className="friend-name">{invite.fromDisplayName}</span>
-                  <span className="friend-info">wants to play!</span>
+                <div key={invite.id} className="friend-card invite">
+                  {renderAvatar(invite.fromDisplayName, invite.fromPhotoUrl)}
+                  <div className="friend-meta">
+                    <div className="friend-name-row">
+                      <span className="friend-name">{invite.fromDisplayName}</span>
+                      <span className="friend-tag">Invite</span>
+                    </div>
+                    <span className="friend-info">wants to play now</span>
+                  </div>
                   <div className="friend-actions">
-                    <button className="friend-btn accept" onClick={() => handleAcceptInvite(invite)}>
+                    <button className="friend-btn pill success" onClick={() => handleAcceptInvite(invite)}>
                       Accept
                     </button>
-                    <button className="friend-btn decline" onClick={() => handleDeclineInvite(invite)}>
+                    <button className="friend-btn pill danger" onClick={() => handleDeclineInvite(invite)}>
                       Decline
                     </button>
                   </div>
@@ -163,16 +212,26 @@ function FriendsList({ onClose, user, onJoinGame }) {
 
         {requests.length > 0 && (
           <div className="friends-section">
-            <h3>Friend Requests</h3>
+            <div className="section-title-row">
+              <h3>Friend Requests</h3>
+              <span className="section-chip alert">New</span>
+            </div>
             <div className="friends-list">
               {requests.map((request) => (
-                <div key={request.id} className="friend-item request">
-                  <span className="friend-name">{request.fromDisplayName}</span>
+                <div key={request.id} className="friend-card request">
+                  {renderAvatar(request.fromDisplayName, request.fromPhotoUrl)}
+                  <div className="friend-meta">
+                    <div className="friend-name-row">
+                      <span className="friend-name">{request.fromDisplayName}</span>
+                      <span className="friend-tag">Request</span>
+                    </div>
+                    <span className="friend-info">wants to connect</span>
+                  </div>
                   <div className="friend-actions">
-                    <button className="friend-btn accept" onClick={() => handleAcceptRequest(request.id)}>
+                    <button className="friend-btn pill success" onClick={() => handleAcceptRequest(request.id)}>
                       Accept
                     </button>
-                    <button className="friend-btn decline" onClick={() => handleDeclineRequest(request.id)}>
+                    <button className="friend-btn pill danger" onClick={() => handleDeclineRequest(request.id)}>
                       Decline
                     </button>
                   </div>
@@ -183,7 +242,10 @@ function FriendsList({ onClose, user, onJoinGame }) {
         )}
 
         <div className="friends-section">
-          <h3>Add Friend</h3>
+          <div className="section-title-row">
+            <h3>Add Friend</h3>
+            <span className="section-chip">By display name</span>
+          </div>
           <div className="add-friend-form">
             <input
               type="text"
@@ -199,19 +261,29 @@ function FriendsList({ onClose, user, onJoinGame }) {
         </div>
 
         <div className="friends-section">
-          <h3>Your Friends ({friends.length})</h3>
+          <div className="section-title-row">
+            <h3>Your Friends ({friends.length})</h3>
+            <span className="section-chip muted">Head-to-head</span>
+          </div>
           {friends.length === 0 ? (
             <p className="no-friends">No friends yet. Add some above!</p>
           ) : (
             <div className="friends-list">
               {friends.map((friend) => (
-                <div key={friend.id} className="friend-item">
-                  <span className="friend-name">{friend.displayName}</span>
+                <div key={friend.id} className="friend-card">
+                  {renderAvatar(friend.displayName, friend.photoURL || friend.avatarUrl)}
+                  <div className="friend-meta">
+                    <div className="friend-name-row">
+                      <span className="friend-name">{friend.displayName}</span>
+                      <span className="friend-tag">W-L-D {friend.rivalry?.wins || 0}-{friend.rivalry?.losses || 0}-{friend.rivalry?.draws || 0}</span>
+                    </div>
+                    <span className="friend-info">Tap invite to start a match</span>
+                  </div>
                   <div className="friend-actions">
-                    <button className="friend-btn invite" onClick={() => handleInvite(friend)}>
+                    <button className="friend-btn pill primary" onClick={() => handleInvite(friend)}>
                       Invite
                     </button>
-                    <button className="friend-btn remove" onClick={() => handleRemoveFriend(friend.id)}>
+                    <button className="friend-btn pill ghost" onClick={() => handleRemoveFriend(friend.id)}>
                       Remove
                     </button>
                   </div>

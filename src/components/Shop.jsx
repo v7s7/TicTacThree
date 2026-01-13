@@ -1,9 +1,22 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { SHOP_ITEMS } from '../utils/shopManager';
 import { soundManager } from '../utils/soundManager';
 
-function Shop({ onClose, coins, inventory, onPurchase, equippedItems }) {
+const rankOrder = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master', 'Grandmaster'];
+const meetsRank = (needed, current) => {
+  if (!needed) return true;
+  const needIdx = rankOrder.indexOf(needed);
+  const curIdx = rankOrder.indexOf(current || 'Bronze');
+  return curIdx >= needIdx;
+};
+
+function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, initialView = 'store', onEquip }) {
   const [selectedTab, setSelectedTab] = useState('frames');
+  const [mode, setMode] = useState(initialView); // 'store' | 'collection'
+
+  useEffect(() => {
+    setMode(initialView);
+  }, [initialView]);
 
   const handlePurchase = (item) => {
     if (coins < item.price) {
@@ -24,11 +37,34 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems }) {
 
   const handleEquip = (item) => {
     soundManager.playClick();
-    onPurchase(item, true);
+    if (onEquip) {
+      onEquip({
+        frame: item.type === 'frame' ? item.id : equippedItems.frame,
+        background: item.type === 'background' ? item.id : equippedItems.background
+      });
+    } else {
+      onPurchase(item, true);
+    }
   };
 
   const items = selectedTab === 'frames' ? SHOP_ITEMS.avatarFrames : SHOP_ITEMS.avatarBackgrounds;
   const isOwned = (itemId) => inventory.includes(itemId);
+  const sortedItems = useMemo(() => {
+    const list = [...items];
+    const filtered = mode === 'collection' ? list.filter((item) => isOwned(item.id)) : list;
+    if (mode === 'collection') {
+      return filtered.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return filtered;
+  }, [items, mode, inventory]);
+
+  const lockReason = (item) => {
+    if (item.rankRequired && !meetsRank(item.rankRequired, rankInfo?.rank)) {
+      return `Requires ${item.rankRequired}`;
+    }
+    return null;
+  };
+
   const isEquipped = (itemId) => {
     if (selectedTab === 'frames') {
       return equippedItems.frame === itemId;
@@ -39,8 +75,23 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems }) {
   return (
     <div className="modal">
       <div className="modal-content shop-modal">
-        <h2>SHOP</h2>
-        <p className="shop-subtitle">Customize your avatar</p>
+        <h2>{mode === 'collection' ? 'YOUR COLLECTION' : 'SHOP'}</h2>
+        <p className="shop-subtitle">{mode === 'collection' ? 'Items you own and can equip' : 'Unlock new frames and backgrounds'}</p>
+
+        <div className="shop-mode-toggle">
+          <button
+            className={`shop-mode-btn ${mode === 'collection' ? 'active' : ''}`}
+            onClick={() => setMode('collection')}
+          >
+            Collection
+          </button>
+          <button
+            className={`shop-mode-btn ${mode === 'store' ? 'active' : ''}`}
+            onClick={() => setMode('store')}
+          >
+            Store
+          </button>
+        </div>
 
         <div className="shop-coins">
           <span className="coin-label">Your Coins:</span>
@@ -69,8 +120,14 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems }) {
         </div>
 
         <div className="shop-items-grid">
-          {items.map((item) => (
-            <div key={item.id} className="shop-item">
+          {sortedItems.length === 0 && mode === 'collection' && (
+            <div className="shop-empty">You have not unlocked anything yet.</div>
+          )}
+          {sortedItems.map((item) => {
+            const owned = isOwned(item.id);
+            const locked = lockReason(item);
+            return (
+              <div key={item.id} className={`shop-item ${locked ? 'locked' : ''}`}>
               <div
                 className="shop-item-preview"
                 style={{
@@ -79,14 +136,20 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems }) {
                 }}
               >
                 <div className="shop-item-letter">A</div>
+                {item.animated && <div className="item-badge glow">Animated</div>}
+                {locked && <div className="item-badge lock">{locked}</div>}
+                {owned && !locked && <div className="item-badge owned">Owned</div>}
               </div>
 
               <div className="shop-item-info">
                 <h4>{item.name}</h4>
                 <p className="shop-item-desc">{item.description}</p>
+                {item.rankRequired && (
+                  <div className="shop-item-rank">Unlocks at {item.rankRequired}</div>
+                )}
 
                 <div className="shop-item-actions">
-                  {isOwned(item.id) ? (
+                  {owned ? (
                     isEquipped(item.id) ? (
                       <button className="shop-btn equipped" disabled>
                         Equipped
@@ -100,15 +163,16 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems }) {
                     <button
                       className="shop-btn buy"
                       onClick={() => handlePurchase(item)}
-                      disabled={coins < item.price}
+                      disabled={coins < item.price || !!locked || mode === 'collection'}
                     >
-                      Buy - {item.price} coins
+                      {locked ? locked : `Buy - ${item.price} coins`}
                     </button>
                   )}
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="modal-buttons">

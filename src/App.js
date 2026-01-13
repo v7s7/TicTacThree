@@ -15,11 +15,13 @@ import Shop from './components/Shop';
 import FriendsList from './components/FriendsList';
 import './styles/App.css';
 import { db } from './firebase';
-import { doc, updateDoc, onSnapshot, arrayUnion } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, arrayUnion, getDoc } from 'firebase/firestore';
 import { nanoid } from 'nanoid';
 import { getBotMove } from './utils/botAI';
-import { getCoins, getStats, awardCoins, updateStats, resetAllData } from './utils/coinsManager';
+import { getCoins, getStats, awardCoins, updateStats, resetAllData, setCoins as setLocalCoins } from './utils/coinsManager';
 import { soundManager } from './utils/soundManager';
+import { updateRankAfterOnlineMatch, ensureSeasonForUser, getCurrentSeasonId } from './utils/rankManager';
+import { rollMysteryReward, canClaimDailyBox, dailyCooldownMs, duplicateToCoins, getLocalBoxState, saveLocalBoxState } from './utils/mysteryBoxManager';
 import {
   onAuthStateChange,
   signOutUser,
@@ -30,6 +32,7 @@ import {
   syncGuestDataToUser
 } from './utils/authManager';
 import { leaveQueue } from './utils/matchmaking';
+import { updateHeadToHeadForFriends, listenFriendRequests, listenGameInvites } from './utils/friendsManager';
 
 function App() {
   // Auth state
@@ -60,6 +63,108 @@ function App() {
   const [coins, setCoins] = useState(getCoins());
   const [stats, setStats] = useState(getStats());
   const [coinsEarned, setCoinsEarned] = useState(0);
+  const [rankInfo, setRankInfo] = useState({
+    rank: 'Bronze',
+    seasonScore: 0,
+    seasonId: getCurrentSeasonId(),
+    seasonStats: { wins: 0, losses: 0, gamesPlayed: 0 }
+  });
+  const [rankUpFlash, setRankUpFlash] = useState(false);
+  const [processedResultId, setProcessedResultId] = useState(null);
+  const [mysteryBoxes, setMysteryBoxes] = useState(0);
+  const [boxWinProgress, setBoxWinProgress] = useState(0);
+  const [lastDailyBoxClaim, setLastDailyBoxClaim] = useState(null);
+  const [boxOpening, setBoxOpening] = useState(false);
+  const [boxReward, setBoxReward] = useState(null);
+  const [shopInitialView, setShopInitialView] = useState('store');
+  const [friendRequestCount, setFriendRequestCount] = useState(0);
+  const [inviteCount, setInviteCount] = useState(0);
+  const [latestInviteName, setLatestInviteName] = useState('');
+
+  const persistBoxState = async (boxes, progress, lastClaim) => {
+    setMysteryBoxes(boxes);
+    setBoxWinProgress(progress);
+    setLastDailyBoxClaim(lastClaim);
+
+    if (user && !checkIsGuest(user)) {
+      await updateDoc(doc(db, 'users', user.uid), {
+        mysteryBoxes: boxes,
+        boxWinProgress: progress,
+        lastMysteryBoxClaim: lastClaim || null
+      });
+    } else {
+      saveLocalBoxState(boxes, progress, lastClaim);
+    }
+  };
+
+  const applyWinTowardBox = async () => {
+    const nextProgress = boxWinProgress + 1;
+    let newBoxes = mysteryBoxes;
+    let progress = nextProgress;
+    if (nextProgress >= 5) {
+      newBoxes += 1;
+      progress = nextProgress - 5;
+      soundManager.playCoin();
+    }
+    await persistBoxState(newBoxes, progress, lastDailyBoxClaim);
+  };
+
+  const handleClaimDailyBox = async () => {
+    if (!canClaimDailyBox(lastDailyBoxClaim)) return;
+    const now = Date.now();
+    soundManager.playCoin();
+    await persistBoxState(mysteryBoxes + 1, boxWinProgress, now);
+  };
+
+  const handleOpenMysteryBox = async () => {
+    if (boxOpening || mysteryBoxes <= 0) return;
+    setBoxOpening(true);
+    setBoxReward(null);
+    soundManager.playClick();
+
+    setTimeout(async () => {
+      const reward = rollMysteryReward(userInventory);
+      let coinsToGrant = 0;
+      let inventoryToSet = [...userInventory];
+      let grantedItem = null;
+
+      if (reward.type === 'cosmetic') {
+        if (inventoryToSet.includes(reward.item.id)) {
+          const fallback = duplicateToCoins();
+          coinsToGrant = fallback.coins;
+        } else {
+          grantedItem = reward.item;
+          inventoryToSet.push(reward.item.id);
+        }
+      } else {
+        coinsToGrant = reward.coins;
+      }
+
+      if (coinsToGrant > 0) {
+        setCoins((prev) => {
+          const total = prev + coinsToGrant;
+          if (!user || checkIsGuest(user)) {
+            setLocalCoins(total);
+          }
+          return total;
+        });
+      }
+
+      if (grantedItem) {
+        setUserInventory(inventoryToSet);
+        if (user && !checkIsGuest(user)) {
+          await updateDoc(doc(db, 'users', user.uid), {
+            inventory: arrayUnion(grantedItem.id)
+          });
+        }
+      }
+
+      await persistBoxState(mysteryBoxes - 1, boxWinProgress, lastDailyBoxClaim);
+      setBoxReward(grantedItem ? { type: 'cosmetic', item: grantedItem } : { type: 'coins', coins: coinsToGrant });
+      soundManager.playCoin();
+      setBoxOpening(false);
+    }, 650);
+  };
 
   // Modals
   const [showSettings, setShowSettings] = useState(false);
@@ -87,6 +192,7 @@ function App() {
   const [hostRoomId, setHostRoomId] = useState(nanoid(4).toUpperCase());
   const [joinRoomId, setJoinRoomId] = useState('');
   const [playerSymbol, setPlayerSymbol] = useState(null);
+  const [opponentId, setOpponentId] = useState(null);
   const [roomId, setRoomId] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [opponentLeft, setOpponentLeft] = useState(false);
@@ -102,9 +208,11 @@ function App() {
       setUser(firebaseUser);
       setAuthLoading(false);
 
-      // Load coins, inventory, and avatar from Firestore for authenticated users
+      // Load coins, inventory, avatar, rank, and boxes for authenticated users
       if (firebaseUser && !firebaseUser.isAnonymous) {
         const userData = await getUserData(firebaseUser.uid);
+        const seasonState = await ensureSeasonForUser(firebaseUser.uid);
+
         if (userData.success) {
           setCoins(userData.data.coins || 0);
           setUserInventory(userData.data.inventory || ['frame_basic', 'bg_none']);
@@ -112,15 +220,105 @@ function App() {
             frame: userData.data.equippedFrame || 'frame_basic',
             background: userData.data.equippedBackground || 'bg_none'
           });
+
+          const rank = seasonState?.rank || userData.data.rank || 'Bronze';
+          const seasonScore = seasonState?.seasonScore ?? userData.data.seasonScore ?? 0;
+          const seasonStats = seasonState?.seasonStats || userData.data.seasonStats || {
+            seasonId: getCurrentSeasonId(),
+            wins: 0,
+            losses: 0,
+            gamesPlayed: 0,
+            lossStreak: 0,
+            winRate: 0,
+            seasonScore: seasonScore
+          };
+          setRankInfo({
+            rank,
+            seasonScore,
+            seasonStats,
+            seasonId: seasonStats.seasonId || getCurrentSeasonId(),
+            lastSeasonRank: seasonState?.lastSeasonRank || userData.data.lastSeasonRank || null
+          });
+
+          setMysteryBoxes(userData.data.mysteryBoxes || 0);
+          setBoxWinProgress(userData.data.boxWinProgress || 0);
+          setLastDailyBoxClaim(userData.data.lastMysteryBoxClaim || null);
         }
       } else {
         // Load from localStorage for guests
         setCoins(getCoins());
+        setRankInfo({
+          rank: 'Bronze',
+          seasonScore: 0,
+          seasonId: getCurrentSeasonId(),
+          seasonStats: { wins: 0, losses: 0, gamesPlayed: 0 }
+        });
+
+        const localBoxState = getLocalBoxState();
+        setMysteryBoxes(localBoxState.boxes);
+        setBoxWinProgress(localBoxState.progress);
+        setLastDailyBoxClaim(localBoxState.lastClaim);
       }
     });
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user || checkIsGuest(user)) {
+      setFriendRequestCount(0);
+      setInviteCount(0);
+      setLatestInviteName('');
+      return () => {};
+    }
+
+    const unsubReq = listenFriendRequests(user.uid, (requests) => {
+      setFriendRequestCount(requests.length);
+    });
+
+    const unsubInv = listenGameInvites(user.uid, (invites) => {
+      setInviteCount(invites.length);
+      setLatestInviteName(invites[0]?.fromDisplayName || '');
+    });
+
+    return () => {
+      unsubReq && unsubReq();
+      unsubInv && unsubInv();
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (gameMode !== 'online' || !roomId || !user || checkIsGuest(user)) return;
+    if (!gameState.showWinModal && gameState.gameActive) return;
+
+    const processRivalry = async () => {
+      const roomSnap = await getDoc(doc(db, 'rooms', roomId));
+      const roomData = roomSnap.data();
+      if (!roomData || roomData.status !== 'finished') return;
+
+      const userId = getCurrentUserId(user);
+      const isX = roomData.playerX === userId;
+      const isO = roomData.playerO === userId;
+      if (!isX && !isO) return;
+
+      const opponent = isX ? roomData.playerO : roomData.playerX;
+      setOpponentId(opponent);
+
+      const resultKey = `${roomId}-${roomData.winner || 'none'}`;
+      if (processedResultId === resultKey) return;
+
+      let outcome = 'draw';
+      if (roomData.winner && roomData.winner !== 'draw') {
+        const userWon = (roomData.winner === 'X' && isX) || (roomData.winner === 'O' && isO);
+        outcome = userWon ? 'win' : 'loss';
+      }
+
+      setProcessedResultId(resultKey);
+      await updateHeadToHeadForFriends(userId, opponent, outcome);
+    };
+
+    processRivalry();
+  }, [gameMode, roomId, user, gameState.showWinModal, gameState.gameActive, processedResultId]);
 
   // Sync coins to Firestore for authenticated users
   useEffect(() => {
@@ -135,6 +333,13 @@ function App() {
     const unsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
       const data = docSnap.data();
       if (!data) return;
+
+      if (data.playerX && data.playerO) {
+        const inferredOpponent = playerSymbol === 'X' ? data.playerO : playerSymbol === 'O' ? data.playerX : null;
+        if (inferredOpponent && inferredOpponent !== opponentId) {
+          setOpponentId(inferredOpponent);
+        }
+      }
 
       if (data.status === 'left' && data.leftBy !== playerSymbol) {
         setOpponentLeft(true);
@@ -152,8 +357,7 @@ function App() {
       }
     });
     return () => unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, playerSymbol]);
+  }, [roomId, playerSymbol, opponentId]);
 
   // Bot move handler
   useEffect(() => {
@@ -361,6 +565,8 @@ function App() {
       });
     }
     leaveGameCleanup();
+    setOpponentId(null);
+    setProcessedResultId(null);
   };
 
   const handleBackToHome = async () => {
@@ -377,6 +583,8 @@ function App() {
       setLocalOScore(0);
       setBotDifficulty(null);
     }
+    setOpponentId(null);
+    setProcessedResultId(null);
   };
 
   const handleSelectMode = (mode, difficulty = null) => {
@@ -408,6 +616,10 @@ function App() {
     resetAllData();
     setCoins(0);
     setStats(getStats());
+    setMysteryBoxes(0);
+    setBoxWinProgress(0);
+    setLastDailyBoxClaim(null);
+    saveLocalBoxState(0, 0, null);
     setShowSettings(false);
   };
 
@@ -449,10 +661,26 @@ function App() {
     await signOutUser();
     setUser(null);
     setCoins(getCoins());
+    const localBoxes = getLocalBoxState();
+    setMysteryBoxes(localBoxes.boxes);
+    setBoxWinProgress(localBoxes.progress);
+    setLastDailyBoxClaim(localBoxes.lastClaim);
+    setOpponentId(null);
+    setProcessedResultId(null);
+    setFriendRequestCount(0);
+    setInviteCount(0);
+    setLatestInviteName('');
   };
 
-  const handleShowShop = () => {
+  const handleShowShop = (view = 'store') => {
     soundManager.playClick();
+    setShopInitialView(view);
+    setShowShop(true);
+  };
+
+  const handleShowAvatarCollection = () => {
+    soundManager.playClick();
+    setShopInitialView('collection');
     setShowShop(true);
   };
 
@@ -461,15 +689,27 @@ function App() {
     setShowFriends(true);
   };
 
-  const handleShopPurchase = async (itemId, itemType) => {
+  const handleShopPurchase = async (item) => {
+    if (!item || !item.id) return;
+    if (userInventory.includes(item.id)) return;
+
+    // Spend coins locally
+    setCoins((prev) => {
+      const next = Math.max(0, prev - (item.price || 0));
+      if (!user || checkIsGuest(user)) {
+        setLocalCoins(next);
+      }
+      return next;
+    });
+
     // Update inventory in state
-    const newInventory = [...userInventory, itemId];
+    const newInventory = [...userInventory, item.id];
     setUserInventory(newInventory);
 
     // Update Firestore
     if (user && !checkIsGuest(user)) {
       await updateDoc(doc(db, 'users', user.uid), {
-        inventory: arrayUnion(itemId)
+        inventory: arrayUnion(item.id)
       });
     }
   };
@@ -490,6 +730,8 @@ function App() {
   const handleMatchFound = (matchData) => {
     setRoomId(matchData.roomId);
     setPlayerSymbol(matchData.playerSymbol);
+    setOpponentId(matchData.opponentId || null);
+    setProcessedResultId(null);
     setGameStarted(true);
     setGameMode('online');
     setOnlineXScore(0);
@@ -513,9 +755,35 @@ function App() {
   };
 
   // Handle win/loss/draw for player moves
-  const handlePlayerMove = useCallback((winner, isDraw) => {
+  const handlePlayerMove = useCallback(async (winner, isDraw) => {
+    const updateOnlineRank = async (outcome) => {
+      if (!user || checkIsGuest(user)) return;
+      try {
+        const rankResult = await updateRankAfterOnlineMatch(getCurrentUserId(user), outcome);
+        if (rankResult) {
+          setRankInfo((prev) => ({
+            ...prev,
+            rank: rankResult.rank,
+            seasonScore: rankResult.seasonScore,
+            seasonStats: { ...rankResult.seasonStats, seasonId: rankResult.seasonId },
+            seasonId: rankResult.seasonId,
+            lastSeasonRank: prev.lastSeasonRank || rankResult.previousRank || null
+          }));
+          if (rankResult.rankUp) {
+            setRankUpFlash(true);
+            setTimeout(() => setRankUpFlash(false), 1200);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to update rank after online match', err);
+      }
+    };
+
     // Prevent double coin awards by checking if already awarded
     if (winner) {
+      const playerWon = (gameMode === 'online' && winner === playerSymbol) ||
+        (gameMode === 'bot' && winner === 'X') ||
+        (gameMode === 'local' && winner === 'X');
       if (gameMode === 'bot') {
         if (winner === 'X') {
           soundManager.playWin();
@@ -547,10 +815,16 @@ function App() {
         setTimeout(() => setCoinsEarned(0), 2000);
         updateStats('win', 'online');
         setStats(getStats());
+        applyWinTowardBox();
+        await updateOnlineRank('win');
       } else if (gameMode === 'online') {
         soundManager.playLoss();
         updateStats('loss', 'online');
         setStats(getStats());
+        await updateOnlineRank('loss');
+      }
+      if (playerWon && gameMode !== 'online') {
+        applyWinTowardBox();
       }
     } else if (isDraw) {
       soundManager.playDraw();
@@ -561,7 +835,7 @@ function App() {
       updateStats('draw', gameMode, botDifficulty);
       setStats(getStats());
     }
-  }, [gameMode, botDifficulty, playerSymbol]);
+  }, [gameMode, botDifficulty, playerSymbol, applyWinTowardBox, user]);
 
   // Show loading while checking auth
   if (authLoading) {
@@ -601,6 +875,16 @@ function App() {
             onShowShop={handleShowShop}
             onShowFriends={handleShowFriends}
             user={user}
+            friendBadgeCount={friendRequestCount + inviteCount}
+            latestInviteName={latestInviteName}
+            mysteryBoxes={mysteryBoxes}
+            boxWinProgress={boxWinProgress}
+            onOpenMysteryBox={handleOpenMysteryBox}
+            onClaimDailyBox={handleClaimDailyBox}
+            canClaimDaily={canClaimDailyBox(lastDailyBoxClaim)}
+            dailyCooldownMs={dailyCooldownMs(lastDailyBoxClaim)}
+            boxOpening={boxOpening}
+            boxReward={boxReward}
           />
         ) : gameMode === 'matchmaking' ? (
           <OnlineMatchmaking
@@ -693,7 +977,7 @@ function App() {
             user={user}
             onSignOut={handleSignOut}
             userAvatar={userAvatar}
-            onAvatarUpdate={handleAvatarUpdate}
+            onOpenShop={handleShowAvatarCollection}
           />
         )}
 
@@ -727,6 +1011,9 @@ function App() {
             inventory={userInventory}
             equippedItems={userAvatar}
             onPurchase={handleShopPurchase}
+            rankInfo={rankInfo}
+            initialView={shopInitialView}
+            onEquip={handleAvatarUpdate}
           />
         )}
 
@@ -735,6 +1022,7 @@ function App() {
             onClose={() => {
               soundManager.playClick();
               setShowFriends(false);
+              setLatestInviteName('');
             }}
             user={user}
             onJoinGame={handleMatchFound}

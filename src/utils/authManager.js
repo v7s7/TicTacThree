@@ -56,7 +56,22 @@ export const signUp = async (email, password, displayName) => {
       inventory: ['frame_basic', 'bg_none'],
       equippedFrame: 'frame_basic',
       equippedBackground: 'bg_none',
-      lastDisplayNameChange: null
+      lastDisplayNameChange: null,
+      rank: 'Bronze',
+      lastSeasonRank: null,
+      seasonStats: {
+        seasonId: null,
+        wins: 0,
+        losses: 0,
+        gamesPlayed: 0,
+        seasonScore: 0,
+        lossStreak: 0,
+        winRate: 0
+      },
+      seasonScore: 0,
+      mysteryBoxes: 0,
+      boxWinProgress: 0,
+      lastMysteryBoxClaim: null
     });
 
     return { success: true, user };

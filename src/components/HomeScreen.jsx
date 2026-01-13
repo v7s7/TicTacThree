@@ -1,13 +1,47 @@
 import React, { useState } from 'react';
 import { DIFFICULTY_INFO } from '../utils/botAI';
 
-function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLeaderboard, onShowShop, onShowFriends, user }) {
+function HomeScreen({
+  onSelectMode,
+  coins,
+  onShowSettings,
+  onShowStats,
+  onShowLeaderboard,
+  onShowShop,
+  onShowFriends,
+  user,
+  friendBadgeCount = 0,
+  latestInviteName,
+  mysteryBoxes = 0,
+  boxWinProgress = 0,
+  onOpenMysteryBox = () => {},
+  onClaimDailyBox = () => {},
+  canClaimDaily = false,
+  dailyCooldownMs = 0,
+  boxOpening = false,
+  boxReward
+}) {
   const isGuest = !user || user.isAnonymous;
   const [view, setView] = useState('main'); // main -> play -> bot
+
+  const formatCooldown = (ms) => {
+    if (!ms) return 'Ready';
+    const hours = Math.floor(ms / (60 * 60 * 1000));
+    const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
+    return `${hours}h ${minutes}m`;
+  };
 
   return (
     <div className="home-screen">
       <div className="top-bar">
+        <button
+          className="icon-btn friend"
+          onClick={onShowFriends}
+          aria-label="Friends"
+        >
+          👥
+          {friendBadgeCount > 0 && <span className="icon-badge">{friendBadgeCount}</span>}
+        </button>
         <div className="top-bar-spacer" aria-hidden="true" />
         <button
           className="icon-btn"
@@ -17,6 +51,19 @@ function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLe
           ⚙️
         </button>
       </div>
+
+      {latestInviteName && (
+        <div
+          className="invite-banner"
+          onClick={onShowFriends}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onShowFriends(); }}
+        >
+          <span>🎯 Game invite from {latestInviteName}</span>
+          <button className="invite-banner-btn">Open</button>
+        </div>
+      )}
 
       <div className="home-header">
         <div className="user-info">
@@ -36,25 +83,32 @@ function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLe
       </div>
 
       {view === 'main' && (
-        <div className="action-row">
-          <button
-            className="action-btn primary"
-            onClick={() => {
-              setView('play');
-            }}
-          >
-            Play
-          </button>
-          <button className="action-btn" onClick={onShowLeaderboard}>
-            Leaderboard
-          </button>
-          <button className="action-btn" onClick={onShowShop}>
-            Shop
-          </button>
-          <div className="coin-long-btn" aria-label="Coins">
-            <span className="coin-emoji">🪙</span> Coins: {coins}
+        <>
+          <div className="action-row">
+            <button
+              className="action-btn primary"
+              onClick={() => {
+                setView('play');
+              }}
+            >
+              Play
+            </button>
+            <button className="action-btn" onClick={() => onShowShop('store')}>
+              Shop
+            </button>
+            <button className="action-btn" onClick={onShowLeaderboard}>
+              Leaderboard
+            </button>
+            <div className="coin-long-btn" aria-label="Coins">
+              <span className="coin-emoji">🪙</span> Coins: {coins}
+            </div>
           </div>
-        </div>
+          <div className="action-row secondary">
+            <button className="action-btn" onClick={() => setView('box')}>
+              Mystery Boxes
+            </button>
+          </div>
+        </>
       )}
 
       {view === 'play' && (
@@ -141,6 +195,69 @@ function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLe
                     <span className="coin-reward">+{info.coinReward} coins</span>
                   </button>
                 ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {view === 'box' && (
+        <div className="play-view slide-panel">
+          <div className="play-view-header">
+            <button
+              className="back-btn-ghost"
+              onClick={() => setView('main')}
+            >
+              ← Back
+            </button>
+            <div className="play-view-title">Mystery Boxes</div>
+          </div>
+
+          <div className="mystery-box-panel">
+            <div className="box-left">
+              <div className="box-label">Mystery Boxes</div>
+              <div className="box-count">{mysteryBoxes} ready</div>
+              <div className="box-progress">
+                <div className="box-progress-bar">
+                  <div
+                    className="box-progress-fill"
+                    style={{ width: `${Math.min(100, (boxWinProgress / 5) * 100)}%` }}
+                  />
+                </div>
+                <span className="box-progress-text">Wins to next box: {Math.max(0, 5 - boxWinProgress)}/5</span>
+              </div>
+              <div className="box-daily">Daily box: {canClaimDaily ? 'Ready now' : formatCooldown(dailyCooldownMs)}</div>
+              {boxReward && (
+                <div className="box-reward-card home">
+                  {boxReward.type === 'cosmetic' ? (
+                    <>
+                      <div className="box-reward-title">New Cosmetic!</div>
+                      <div className="box-reward-name">{boxReward.item.name}</div>
+                      <div className="box-reward-desc">Added to your inventory.</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="box-reward-title">Bonus Coins</div>
+                      <div className="box-reward-name">+{boxReward.coins} coins</div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="box-right">
+              <div className="box-3d">
+                <div className="box-lid" />
+                <div className="box-body" />
+                <div className="box-glow" />
+              </div>
+              <div className="box-actions">
+                <button className="box-btn" onClick={onOpenMysteryBox} disabled={boxOpening || mysteryBoxes <= 0}>
+                  {boxOpening ? 'Opening...' : 'Open Box'}
+                </button>
+                <button className="box-btn secondary" onClick={onClaimDailyBox} disabled={!canClaimDaily}>
+                  {canClaimDaily ? 'Claim Daily' : 'Daily cooldown'}
+                </button>
               </div>
             </div>
           </div>
