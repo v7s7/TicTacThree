@@ -27,6 +27,7 @@ function FriendsList({ onClose, user, onJoinGame }) {
       loadRequests();
       loadGameInvites();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const loadFriends = async () => {

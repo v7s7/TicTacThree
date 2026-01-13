@@ -46,7 +46,7 @@ function OnlineMatchmaking({ userId, displayName, onMatchFound, onCancel, onCrea
     await joinQueue(userId, displayName);
 
     // Try to find a match immediately
-    const matchResult = await findMatch(userId);
+    const matchResult = await findMatch(userId, displayName);
     if (matchResult.success) {
       soundManager.playCoin();
       onMatchFound(matchResult);
@@ -63,7 +63,7 @@ function OnlineMatchmaking({ userId, displayName, onMatchFound, onCancel, onCrea
 
     // Try to find match every 3 seconds
     const searchInterval = setInterval(async () => {
-      const result = await findMatch(userId);
+      const result = await findMatch(userId, displayName);
       if (result.success) {
         soundManager.playCoin();
         setSearching(false);

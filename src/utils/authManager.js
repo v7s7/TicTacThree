@@ -51,7 +51,12 @@ export const signUp = async (email, password, displayName) => {
       totalGames: 0,
       wins: 0,
       losses: 0,
-      draws: 0
+      draws: 0,
+      friends: [],
+      inventory: ['frame_basic', 'bg_none'],
+      equippedFrame: 'frame_basic',
+      equippedBackground: 'bg_none',
+      lastDisplayNameChange: null
     });
 
     return { success: true, user };

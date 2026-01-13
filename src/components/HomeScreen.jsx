@@ -1,15 +1,16 @@
 import React from 'react';
 import { DIFFICULTY_INFO } from '../utils/botAI';
 
-function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLeaderboard, user, onSignOut }) {
+function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLeaderboard, onShowShop, onShowFriends, user }) {
+  const isGuest = !user || user.isAnonymous;
+
   return (
     <div className="home-screen">
       <div className="home-header">
         <div className="user-info">
-          {user && !user.isAnonymous ? (
+          {!isGuest ? (
             <div className="logged-in-user">
               <span className="user-name">{user.displayName || user.email}</span>
-              <button className="sign-out-btn" onClick={onSignOut}>Sign Out</button>
             </div>
           ) : (
             <div className="guest-user">
@@ -70,6 +71,16 @@ function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLe
       </div>
 
       <div className="home-footer">
+        {!isGuest && (
+          <>
+            <button className="footer-btn" onClick={onShowShop}>
+              Shop
+            </button>
+            <button className="footer-btn" onClick={onShowFriends}>
+              Friends
+            </button>
+          </>
+        )}
         <button className="footer-btn" onClick={onShowStats}>
           Stats
         </button>

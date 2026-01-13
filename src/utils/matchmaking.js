@@ -68,7 +68,7 @@ export const listenToActivePlayersCount = (callback) => {
 };
 
 // Try to find a match
-export const findMatch = async (userId) => {
+export const findMatch = async (userId, displayName = 'Guest') => {
   try {
     // Get all players in queue except current user
     const q = query(
@@ -95,7 +95,7 @@ export const findMatch = async (userId) => {
         currentPlayer: 'X',
         playerX: userId,
         playerO: opponent.id,
-        playerXName: 'You',
+        playerXName: displayName,
         playerOName: opponent.displayName,
         status: 'playing',
         winner: null,
@@ -115,7 +115,9 @@ export const findMatch = async (userId) => {
         roomId,
         opponentId: opponent.id,
         opponentName: opponent.displayName,
-        playerSymbol: 'X'
+        playerSymbol: 'X',
+        playerXName: displayName,
+        playerOName: opponent.displayName
       };
     }
 
@@ -147,7 +149,9 @@ export const listenForMatch = (userId, onMatchFound) => {
           roomId: roomDoc.id,
           opponentId: roomData.playerX,
           opponentName: roomData.playerXName || 'Opponent',
-          playerSymbol: 'O'
+          playerSymbol: 'O',
+          playerXName: roomData.playerXName || 'Player X',
+          playerOName: roomData.playerOName || 'Player O'
         });
       }
     } catch (error) {
@@ -170,7 +174,9 @@ export const listenForMatch = (userId, onMatchFound) => {
           roomId: roomDoc.id,
           opponentId: roomData.playerX,
           opponentName: roomData.playerXName || 'Opponent',
-          playerSymbol: 'O'
+          playerSymbol: 'O',
+          playerXName: roomData.playerXName || 'Player X',
+          playerOName: roomData.playerOName || 'Player O'
         });
       }
     }

@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { doc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { soundManager } from '../utils/soundManager';
 
-function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGameEnd }) {
+function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGameEnd, playerXName, playerOName }) {
   useEffect(() => {
     if (!roomId) return;
     const roomRef = doc(db, 'rooms', roomId);
@@ -19,7 +19,7 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
           showWinModal: data.status === 'finished',
           winMessage: data.winner === 'draw'
             ? "It's a draw!"
-            : data.winner ? `Player ${data.winner} wins!` : '',
+            : data.winner ? `${data.winner === 'X' ? (playerXName || 'Player X') : (playerOName || 'Player O')} wins!` : '',
           playerXMarks: data.playerXMarks || [],
           playerOMarks: data.playerOMarks || [],
           markToRemoveIndex: data.markToRemoveIndex ?? null
@@ -27,7 +27,7 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
       }
     });
     return () => unsubscribe();
-  }, [roomId, setGameState]);
+  }, [roomId, setGameState, playerXName, playerOName]);
 
   const handleCellClick = async (index) => {
     if (!gameState.gameActive || gameState.board[index]) return;
@@ -70,7 +70,11 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
         currentPlayer: prev.currentPlayer === 'X' ? 'O' : 'X',
         gameActive: !winner && !isDraw,
         showWinModal: winner || isDraw,
-        winMessage: winner ? `Player ${winner} wins!` : isDraw ? "It's a draw!" : '',
+        winMessage: winner
+          ? gameMode === 'bot'
+            ? `${winner === 'X' ? 'You' : 'Bot'} win${winner === 'O' ? 's' : ''}!`
+            : `${winner === 'X' ? (playerXName || 'Player X') : (playerOName || 'Player O')} wins!`
+          : isDraw ? "It's a draw!" : '',
         winningLine: winningLine
       }));
     };

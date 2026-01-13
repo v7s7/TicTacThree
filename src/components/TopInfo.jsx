@@ -1,7 +1,7 @@
 import React from 'react';
 import { DIFFICULTY_INFO } from '../utils/botAI';
 
-function TopInfo({ roomId, localXScore, localOScore, onlineXScore, onlineOScore, gameState, opponentLeft, gameMode, botDifficulty }) {
+function TopInfo({ roomId, localXScore, localOScore, onlineXScore, onlineOScore, gameState, opponentLeft, gameMode, botDifficulty, playerXName, playerOName }) {
   const getDifficultyBadge = () => {
     if (gameMode === 'bot' && botDifficulty) {
       const info = DIFFICULTY_INFO[botDifficulty];
@@ -48,8 +48,8 @@ function TopInfo({ roomId, localXScore, localOScore, onlineXScore, onlineOScore,
 
       {gameMode === 'online' ? (
         <>
-          <p>Player X (Online): {onlineXScore}</p>
-          <p>Player O (Online): {onlineOScore}</p>
+          <p>{playerXName || 'Player X'}: {onlineXScore}</p>
+          <p>{playerOName || 'Player O'}: {onlineOScore}</p>
         </>
       ) : gameMode === 'bot' ? (
         <>
@@ -58,15 +58,17 @@ function TopInfo({ roomId, localXScore, localOScore, onlineXScore, onlineOScore,
         </>
       ) : (
         <>
-          <p>Player X: {localXScore}</p>
-          <p>Player O: {localOScore}</p>
+          <p>{playerXName || 'Player X'}: {localXScore}</p>
+          <p>{playerOName || 'Player O'}: {localOScore}</p>
         </>
       )}
 
       <p className="turn-indicator">
         {gameMode === 'bot'
           ? (gameState.currentPlayer === 'X' ? "Your turn" : "Bot is thinking...")
-          : `Player ${gameState.currentPlayer}'s turn`}
+          : gameMode === 'online'
+          ? `${gameState.currentPlayer === 'X' ? (playerXName || 'Player X') : (playerOName || 'Player O')}'s turn`
+          : `${gameState.currentPlayer === 'X' ? (playerXName || 'Player X') : (playerOName || 'Player O')}'s turn`}
       </p>
 
       {opponentLeft && <p style={{ color: 'orange' }}>Opponent left the game. Returning to home...</p>}

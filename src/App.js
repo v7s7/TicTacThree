@@ -11,9 +11,11 @@ import Settings from './components/Settings';
 import StatsModal from './components/StatsModal';
 import Leaderboard from './components/Leaderboard';
 import CoinDisplay from './components/CoinDisplay';
+import Shop from './components/Shop';
+import FriendsList from './components/FriendsList';
 import './styles/App.css';
 import { db } from './firebase';
-import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, arrayUnion } from 'firebase/firestore';
 import { nanoid } from 'nanoid';
 import { getBotMove } from './utils/botAI';
 import { getCoins, getStats, awardCoins, updateStats, resetAllData } from './utils/coinsManager';
@@ -63,6 +65,15 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showShop, setShowShop] = useState(false);
+  const [showFriends, setShowFriends] = useState(false);
+
+  // Avatar and inventory
+  const [userInventory, setUserInventory] = useState(['frame_basic', 'bg_none']);
+  const [userAvatar, setUserAvatar] = useState({
+    frame: 'frame_basic',
+    background: 'bg_none'
+  });
 
   // Local game state
   const [localXScore, setLocalXScore] = useState(0);
@@ -79,6 +90,8 @@ function App() {
   const [roomId, setRoomId] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [opponentLeft, setOpponentLeft] = useState(false);
+  const [playerXName, setPlayerXName] = useState('Player X');
+  const [playerOName, setPlayerOName] = useState('Player O');
 
   // Bot state
   const [isBotThinking, setIsBotThinking] = useState(false);
@@ -89,11 +102,16 @@ function App() {
       setUser(firebaseUser);
       setAuthLoading(false);
 
-      // Load coins from Firestore for authenticated users
+      // Load coins, inventory, and avatar from Firestore for authenticated users
       if (firebaseUser && !firebaseUser.isAnonymous) {
         const userData = await getUserData(firebaseUser.uid);
         if (userData.success) {
           setCoins(userData.data.coins || 0);
+          setUserInventory(userData.data.inventory || ['frame_basic', 'bg_none']);
+          setUserAvatar({
+            frame: userData.data.equippedFrame || 'frame_basic',
+            background: userData.data.equippedBackground || 'bg_none'
+          });
         }
       } else {
         // Load from localStorage for guests
@@ -420,6 +438,42 @@ function App() {
     setCoins(getCoins());
   };
 
+  const handleShowShop = () => {
+    soundManager.playClick();
+    setShowShop(true);
+  };
+
+  const handleShowFriends = () => {
+    soundManager.playClick();
+    setShowFriends(true);
+  };
+
+  const handleShopPurchase = async (itemId, itemType) => {
+    // Update inventory in state
+    const newInventory = [...userInventory, itemId];
+    setUserInventory(newInventory);
+
+    // Update Firestore
+    if (user && !checkIsGuest(user)) {
+      await updateDoc(doc(db, 'users', user.uid), {
+        inventory: arrayUnion(itemId)
+      });
+    }
+  };
+
+  const handleAvatarUpdate = async (avatarData) => {
+    // Update avatar in state
+    setUserAvatar(avatarData);
+
+    // Update Firestore
+    if (user && !checkIsGuest(user)) {
+      await updateDoc(doc(db, 'users', user.uid), {
+        equippedFrame: avatarData.frame,
+        equippedBackground: avatarData.background
+      });
+    }
+  };
+
   const handleMatchFound = (matchData) => {
     setRoomId(matchData.roomId);
     setPlayerSymbol(matchData.playerSymbol);
@@ -427,6 +481,10 @@ function App() {
     setGameMode('online');
     setOnlineXScore(0);
     setOnlineOScore(0);
+
+    // Set player names from match data
+    if (matchData.playerXName) setPlayerXName(matchData.playerXName);
+    if (matchData.playerOName) setPlayerOName(matchData.playerOName);
   };
 
   const handleCreateRoom = () => {
@@ -519,8 +577,9 @@ function App() {
             onShowSettings={handleShowSettings}
             onShowStats={handleShowStats}
             onShowLeaderboard={handleShowLeaderboard}
+            onShowShop={handleShowShop}
+            onShowFriends={handleShowFriends}
             user={user}
-            onSignOut={handleSignOut}
           />
         ) : gameMode === 'matchmaking' ? (
           <OnlineMatchmaking
@@ -543,6 +602,8 @@ function App() {
               opponentLeft={opponentLeft}
               gameMode={gameMode}
               botDifficulty={botDifficulty}
+              playerXName={playerXName}
+              playerOName={playerOName}
             />
 
             <Board
@@ -552,6 +613,8 @@ function App() {
               roomId={roomId}
               gameMode={gameMode}
               onGameEnd={handlePlayerMove}
+              playerXName={playerXName}
+              playerOName={playerOName}
             />
 
             <Controls
@@ -590,6 +653,9 @@ function App() {
               setOnlineOScore={setOnlineOScore}
               setGameStarted={setGameStarted}
               setGameMode={setGameMode}
+              user={user}
+              setPlayerXName={setPlayerXName}
+              setPlayerOName={setPlayerOName}
             />
           </>
         )}
@@ -603,6 +669,10 @@ function App() {
               soundManager.playClick();
               setShowSettings(false);
             }}
+            user={user}
+            onSignOut={handleSignOut}
+            userAvatar={userAvatar}
+            onAvatarUpdate={handleAvatarUpdate}
           />
         )}
 
@@ -623,6 +693,30 @@ function App() {
               soundManager.playClick();
               setShowLeaderboard(false);
             }}
+          />
+        )}
+
+        {showShop && (
+          <Shop
+            onClose={() => {
+              soundManager.playClick();
+              setShowShop(false);
+            }}
+            coins={coins}
+            inventory={userInventory}
+            equippedItems={userAvatar}
+            onPurchase={handleShopPurchase}
+          />
+        )}
+
+        {showFriends && (
+          <FriendsList
+            onClose={() => {
+              soundManager.playClick();
+              setShowFriends(false);
+            }}
+            user={user}
+            onJoinGame={handleMatchFound}
           />
         )}
       </div>
