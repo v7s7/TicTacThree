@@ -3,31 +3,39 @@ import { nanoid } from 'nanoid';
 import { db } from '../firebase';
 import { doc, setDoc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
-function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomId, joinRoomId, setJoinRoomId, setRoomId, setPlayerSymbol, setShowHostModal, setShowJoinModal, setOnlineXScore, setOnlineOScore, setIsHosting, setGameStarted }) {
-  
+function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomId, joinRoomId, setJoinRoomId, setRoomId, setPlayerSymbol, setShowHostModal, setShowJoinModal, setOnlineXScore, setOnlineOScore, setGameStarted, setGameMode, user, setPlayerXName, setPlayerOName }) {
+
   const handleCreateGame = async () => {
     const roomRef = doc(db, 'rooms', hostRoomId);
+    const hostName = user?.displayName || 'Host';
     await setDoc(roomRef, {
       board: Array(9).fill(null),
       currentPlayer: 'X',
       playerX: 'host',
       playerO: null,
+      playerXName: hostName,
+      playerOName: 'Waiting...',
       status: 'waiting',
       winner: null,
       private: false,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      playerXMarks: [],
+      playerOMarks: [],
+      markToRemoveIndex: null
     });
+    setPlayerXName(hostName);
+    setPlayerOName('Waiting...');
     setRoomId(hostRoomId);
     setPlayerSymbol('X');
     setShowHostModal(false);
     setOnlineXScore(0);
     setOnlineOScore(0);
-    setIsHosting(true);
+    if (setGameMode) setGameMode('online');
 
     onSnapshot(roomRef, (docSnap) => {
       const data = docSnap.data();
       if (data && data.playerO) {
-        setIsHosting(false);
+        if (data.playerOName) setPlayerOName(data.playerOName);
         setGameStarted(true);
       }
     });
@@ -41,13 +49,21 @@ function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomI
     if (!data) return alert('Room not found.');
     if (data.private) return alert('This room is private.');
 
-    await updateDoc(roomRef, { playerO: 'guest', status: 'full' });
+    const guestName = user?.displayName || 'Guest';
+    await updateDoc(roomRef, {
+      playerO: 'guest',
+      playerOName: guestName,
+      status: 'full'
+    });
+    setPlayerXName(data.playerXName || 'Player X');
+    setPlayerOName(guestName);
     setRoomId(joinRoomId);
     setPlayerSymbol('O');
     setShowJoinModal(false);
     setOnlineXScore(0);
     setOnlineOScore(0);
     setGameStarted(true);
+    if (setGameMode) setGameMode('online');
   };
 
   return (
