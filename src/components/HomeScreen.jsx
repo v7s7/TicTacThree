@@ -1,11 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DIFFICULTY_INFO } from '../utils/botAI';
 
 function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLeaderboard, onShowShop, onShowFriends, user }) {
   const isGuest = !user || user.isAnonymous;
+  const [view, setView] = useState('main'); // main -> play -> bot
 
   return (
     <div className="home-screen">
+      <div className="top-bar">
+        <div className="top-bar-spacer" aria-hidden="true" />
+        <button
+          className="icon-btn"
+          onClick={onShowSettings}
+          aria-label="Settings"
+        >
+          ⚙️
+        </button>
+      </div>
+
       <div className="home-header">
         <div className="user-info">
           {!isGuest ? (
@@ -23,74 +35,117 @@ function HomeScreen({ onSelectMode, coins, onShowSettings, onShowStats, onShowLe
         <p className="game-subtitle">Only 3 Marks Rule!</p>
       </div>
 
-      <div className="coin-display-large">
-        <span className="coin-label">Coins:</span>
-        <span className="coin-amount">{coins}</span>
-      </div>
-
-      <div className="mode-selection">
-        <h2>Select Game Mode</h2>
-
-        <div className="mode-grid">
-          {/* Bot Mode */}
-          <div className="mode-card">
-            <div className="mode-icon-text">BOT</div>
-            <h3>Play vs Bot</h3>
-            <p>Challenge AI opponents</p>
-            <div className="difficulty-buttons">
-              {Object.entries(DIFFICULTY_INFO).map(([key, info]) => (
-                <button
-                  key={key}
-                  className="difficulty-btn"
-                  style={{ borderColor: info.color }}
-                  onClick={() => onSelectMode('bot', key)}
-                >
-                  <span className="difficulty-label">{info.label}</span>
-                  <span className="coin-reward">+{info.coinReward} coins</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Local Mode */}
-          <div className="mode-card" onClick={() => onSelectMode('local')}>
-            <div className="mode-icon-text">1v1</div>
-            <h3>Local 1v1</h3>
-            <p>Play with a friend locally</p>
-            <div className="coin-reward-small">+5 coins per win</div>
-          </div>
-
-          {/* Online Mode */}
-          <div className="mode-card" onClick={() => onSelectMode('online')}>
-            <div className="mode-icon-text">ONLINE</div>
-            <h3>Online Multiplayer</h3>
-            <p>Play against players worldwide</p>
-            <div className="coin-reward-small">+30 coins per win</div>
+      {view === 'main' && (
+        <div className="action-row">
+          <button
+            className="action-btn primary"
+            onClick={() => {
+              setView('play');
+            }}
+          >
+            Play
+          </button>
+          <button className="action-btn" onClick={onShowLeaderboard}>
+            Leaderboard
+          </button>
+          <button className="action-btn" onClick={onShowShop}>
+            Shop
+          </button>
+          <div className="coin-long-btn" aria-label="Coins">
+            <span className="coin-emoji">🪙</span> Coins: {coins}
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="home-footer">
-        {!isGuest && (
-          <>
-            <button className="footer-btn" onClick={onShowShop}>
-              Shop
+      {view === 'play' && (
+        <div className="play-view slide-panel">
+          <div className="play-view-header">
+            <button
+              className="back-btn-ghost"
+              onClick={() => {
+                setView('main');
+              }}
+            >
+              ← Back
             </button>
-            <button className="footer-btn" onClick={onShowFriends}>
-              Friends
+            <div className="play-view-title">Choose a mode</div>
+          </div>
+
+          <div className="play-options">
+            <button
+              className="mode-option-btn"
+              onClick={() => setView('bot')}
+            >
+              <div className="mode-option-title">Play vs Bot</div>
+              <div className="mode-option-sub">Tap to choose difficulty</div>
             </button>
-          </>
-        )}
-        <button className="footer-btn" onClick={onShowStats}>
-          Stats
-        </button>
-        <button className="footer-btn" onClick={onShowLeaderboard}>
-          Leaderboard
-        </button>
-        <button className="footer-btn" onClick={onShowSettings}>
-          Settings
-        </button>
-      </div>
+
+            <button
+              className="mode-option-btn"
+              onClick={() => {
+                onSelectMode('local');
+                setView('main');
+              }}
+            >
+              <div className="mode-option-title">Local 1v1</div>
+              <div className="mode-option-sub">Two players on one device</div>
+            </button>
+
+            <button
+              className="mode-option-btn"
+              onClick={() => {
+                onSelectMode('online');
+                setView('main');
+              }}
+            >
+              <div className="mode-option-title">Online</div>
+              <div className="mode-option-sub">Match with players online</div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {view === 'bot' && (
+        <div className="play-view slide-panel">
+          <div className="play-view-header">
+            <button
+              className="back-btn-ghost"
+              onClick={() => setView('play')}
+            >
+              ← Back
+            </button>
+            <div className="play-view-title">Select Difficulty</div>
+          </div>
+
+          <div className="mode-grid compact single">
+            <div className="mode-card bot-card open">
+              <div className="bot-toggle">
+                <div>
+                  <div className="mode-icon-text small">BOT</div>
+                  <h3>Choose Difficulty</h3>
+                </div>
+              </div>
+
+              <div className="difficulty-buttons">
+                {Object.entries(DIFFICULTY_INFO).map(([key, info]) => (
+                  <button
+                    key={key}
+                    className="difficulty-btn compact"
+                    style={{ borderColor: info.color }}
+                    onClick={() => {
+                      onSelectMode('bot', key);
+                      setView('main');
+                    }}
+                  >
+                    <span className="difficulty-label">{info.label}</span>
+                    <span className="coin-reward">+{info.coinReward} coins</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

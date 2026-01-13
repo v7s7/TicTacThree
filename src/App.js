@@ -208,7 +208,24 @@ function App() {
 
     const isDraw = !winner && updatedBoard.every(cell => cell !== null);
 
-    if (winner) {\n      soundManager.playLoss();\n      const result = 'loss';  // Bot won, so player lost\n      const coinReward = awardCoins(result, 'bot', botDifficulty);\n      setCoins(coinReward.totalCoins);\n      setCoinsEarned(coinReward.coinsAdded);\n      setTimeout(() => setCoinsEarned(0), 2000);\n      updateStats(result, 'bot', botDifficulty);\n      setStats(getStats());\n    } else if (isDraw) {\n      soundManager.playDraw();\n      const coinReward = awardCoins('draw', 'bot', botDifficulty);\n      setCoins(coinReward.totalCoins);\n      setCoinsEarned(coinReward.coinsAdded);\n      setTimeout(() => setCoinsEarned(0), 2000);\n      updateStats('draw', 'bot', botDifficulty);\n      setStats(getStats());\n    }
+    if (winner) {
+      soundManager.playLoss();
+      const result = 'loss'; // Bot won, so player lost
+      const coinReward = awardCoins(result, 'bot', botDifficulty);
+      setCoins(coinReward.totalCoins);
+      setCoinsEarned(coinReward.coinsAdded);
+      setTimeout(() => setCoinsEarned(0), 2000);
+      updateStats(result, 'bot', botDifficulty);
+      setStats(getStats());
+    } else if (isDraw) {
+      soundManager.playDraw();
+      const coinReward = awardCoins('draw', 'bot', botDifficulty);
+      setCoins(coinReward.totalCoins);
+      setCoinsEarned(coinReward.coinsAdded);
+      setTimeout(() => setCoinsEarned(0), 2000);
+      updateStats('draw', 'bot', botDifficulty);
+      setStats(getStats());
+    }
 
     setGameState(prev => ({
       ...prev,
