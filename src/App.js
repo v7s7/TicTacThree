@@ -208,24 +208,7 @@ function App() {
 
     const isDraw = !winner && updatedBoard.every(cell => cell !== null);
 
-    if (winner) {
-      soundManager.playLoss();
-      const result = winner === 'X' ? 'win' : 'loss';
-      const coinReward = awardCoins(result, 'bot', botDifficulty);
-      setCoins(coinReward.totalCoins);
-      setCoinsEarned(coinReward.coinsAdded);
-      setTimeout(() => setCoinsEarned(0), 2000);
-      updateStats(result, 'bot', botDifficulty);
-      setStats(getStats());
-    } else if (isDraw) {
-      soundManager.playDraw();
-      const coinReward = awardCoins('draw', 'bot', botDifficulty);
-      setCoins(coinReward.totalCoins);
-      setCoinsEarned(coinReward.coinsAdded);
-      setTimeout(() => setCoinsEarned(0), 2000);
-      updateStats('draw', 'bot', botDifficulty);
-      setStats(getStats());
-    }
+    if (winner) {\n      soundManager.playLoss();\n      const result = 'loss';  // Bot won, so player lost\n      const coinReward = awardCoins(result, 'bot', botDifficulty);\n      setCoins(coinReward.totalCoins);\n      setCoinsEarned(coinReward.coinsAdded);\n      setTimeout(() => setCoinsEarned(0), 2000);\n      updateStats(result, 'bot', botDifficulty);\n      setStats(getStats());\n    } else if (isDraw) {\n      soundManager.playDraw();\n      const coinReward = awardCoins('draw', 'bot', botDifficulty);\n      setCoins(coinReward.totalCoins);\n      setCoinsEarned(coinReward.coinsAdded);\n      setTimeout(() => setCoinsEarned(0), 2000);\n      updateStats('draw', 'bot', botDifficulty);\n      setStats(getStats());\n    }
 
     setGameState(prev => ({
       ...prev,
@@ -236,7 +219,7 @@ function App() {
       currentPlayer: 'X',
       gameActive: !winner && !isDraw,
       showWinModal: winner || isDraw,
-      winMessage: winner ? `Player ${winner} wins!` : isDraw ? "It's a draw!" : '',
+      winMessage: winner ? 'Bot wins!' : isDraw ? "It's a draw!" : '',
       winningLine: winningLine
     }));
   };
@@ -270,11 +253,11 @@ function App() {
   };
 
   const handleRematch = async (lastWinner) => {
-    const nextStarter = lastWinner === 'X' ? 'O' : 'X';
+    const nextStarter = lastWinner === 'X' ? 'O' : lastWinner === 'O' ? 'X' : gameState.startingPlayer === 'X' ? 'O' : 'X';
     let newXScore = 0;
     let newOScore = 0;
 
-    if (!roomId) {
+    if (!roomId || gameMode === 'bot' || gameMode === 'local') {
       newXScore = lastWinner === 'X' ? localXScore + 1 : localXScore;
       newOScore = lastWinner === 'O' ? localOScore + 1 : localOScore;
       setLocalXScore(newXScore);
@@ -330,12 +313,25 @@ function App() {
       const lastWinner = gameState.winMessage.includes('X') ? 'X' :
                          gameState.winMessage.includes('O') ? 'O' : null;
 
-      if (gameMode === 'local') {
+      if (gameMode === 'local' || gameMode === 'bot') {
         if (lastWinner === 'X') setLocalXScore(prev => prev + 1);
         if (lastWinner === 'O') setLocalOScore(prev => prev + 1);
       }
 
-      resetBoardFull();
+      const nextStarter = lastWinner === 'X' ? 'O' : lastWinner === 'O' ? 'X' : gameState.startingPlayer === 'X' ? 'O' : 'X';
+      setGameState(prev => ({
+        ...prev,
+        board: Array(9).fill(null),
+        playerXMarks: [],
+        playerOMarks: [],
+        markToRemoveIndex: null,
+        winningLine: [],
+        winMessage: '',
+        showWinModal: false,
+        gameActive: true,
+        currentPlayer: nextStarter,
+        startingPlayer: nextStarter
+      }));
     }
   };
 
@@ -501,17 +497,25 @@ function App() {
 
   // Handle win/loss/draw for player moves
   const handlePlayerMove = useCallback((winner, isDraw) => {
+    // Prevent double coin awards by checking if already awarded
     if (winner) {
       if (gameMode === 'bot') {
-        soundManager.playWin();
-        const coinReward = awardCoins('win', 'bot', botDifficulty);
-        setCoins(coinReward.totalCoins);
-        setCoinsEarned(coinReward.coinsAdded);
-        setTimeout(() => setCoinsEarned(0), 2000);
-        updateStats('win', 'bot', botDifficulty);
-        setStats(getStats());
+        if (winner === 'X') {
+          soundManager.playWin();
+          const coinReward = awardCoins('win', 'bot', botDifficulty);
+          setCoins(coinReward.totalCoins);
+          setCoinsEarned(coinReward.coinsAdded);
+          setTimeout(() => setCoinsEarned(0), 2000);
+          updateStats('win', 'bot', botDifficulty);
+          setStats(getStats());
+        } else {
+          soundManager.playLoss();
+          updateStats('loss', 'bot', botDifficulty);
+          setStats(getStats());
+        }
       } else if (gameMode === 'local') {
         soundManager.playWin();
+        // Award coins only once for local games
         const coinReward = awardCoins('win', 'local');
         setCoins(coinReward.totalCoins);
         setCoinsEarned(coinReward.coinsAdded);

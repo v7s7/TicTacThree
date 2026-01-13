@@ -54,7 +54,8 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
 
       const isDraw = !winner && updatedBoard.every(cell => cell !== null);
 
-      if (onGameEnd) {
+      // Only call onGameEnd once when game ends
+      if (onGameEnd && (winner || isDraw)) {
         onGameEnd(winner, isDraw);
       }
 
