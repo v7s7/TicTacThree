@@ -2559,3 +2559,183 @@ body {
   justify-content: center;
   align-items: center;
 }
+
+/* ============= SHOP TIER SECTIONS ============= */
+.shop-items-container {
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.shop-tier-section {
+  margin-bottom: 30px;
+}
+
+.shop-tier-title {
+  color: #667eea;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  text-align: left;
+  padding-left: 10px;
+  border-left: 4px solid #667eea;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.item-badge.element {
+  background: linear-gradient(135deg, #4caf50, #66bb6a);
+  color: white;
+  text-transform: capitalize;
+}
+
+.item-badge.rank-locked {
+  background: linear-gradient(135deg, #ff4081, #f50057);
+  color: white;
+  top: auto;
+  bottom: -8px;
+  right: 50%;
+  transform: translateX(50%);
+}
+
+/* ============= RANK MEDAL DISPLAY ============= */
+.rank-medal-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rank-medal {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+  border: 3px solid;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+}
+
+.rank-medal.bronze {
+  background: linear-gradient(135deg, #c47b39, #8b5a2b);
+  border-color: #f5a962;
+  color: #fff;
+}
+
+.rank-medal.silver {
+  background: linear-gradient(135deg, #b0bec5, #90a4ae);
+  border-color: #cfd8dc;
+  color: #263238;
+}
+
+.rank-medal.gold {
+  background: linear-gradient(135deg, #ffca28, #ffa000);
+  border-color: #ffecb3;
+  color: #3e2723;
+}
+
+.rank-medal.platinum {
+  background: linear-gradient(135deg, #80deea, #4dd0e1);
+  border-color: #b2ebf2;
+  color: #006064;
+}
+
+.rank-medal.diamond {
+  background: linear-gradient(135deg, #7e57c2, #5e35b1);
+  border-color: #b39ddb;
+  color: #fff;
+}
+
+.rank-medal.master {
+  background: linear-gradient(135deg, #ef6c00, #e65100);
+  border-color: #ff9800;
+  color: #fff;
+}
+
+.rank-medal.grandmaster {
+  background: linear-gradient(135deg, #ff4081, #f50057);
+  border-color: #ff80ab;
+  color: #fff;
+}
+
+/* Rank medal orbiting effects */
+.rank-medal-orbit {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  animation: orbit 6s linear infinite;
+}
+
+.rank-medal-orbit-item {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+}
+
+@keyframes orbit {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============= ENHANCED SHOP SCROLLBAR ============= */
+.shop-items-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.shop-items-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.shop-items-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 10px;
+}
+
+.shop-items-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #764ba2, #667eea);
+}
+
+/* ============= EMPTY STATE ============= */
+.shop-empty {
+  grid-column: 1 / -1;
+  padding: 40px 20px;
+  text-align: center;
+  color: #a0a0a0;
+  font-size: 1.1rem;
+}
+
+/* ============= RESPONSIVE ADJUSTMENTS ============= */
+@media (max-width: 768px) {
+  .shop-tier-title {
+    font-size: 0.95rem;
+  }
+  
+  .shop-items-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+  }
+  
+  .shop-item-preview {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .shop-item-letter {
+    font-size: 1.75rem;
+  }
+}

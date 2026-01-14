@@ -1,0 +1,793 @@
+/* ============================================
+   AVATAR & BACKGROUND ANIMATION EFFECTS
+   GPU-optimized animations for mobile/web
+   ============================================ */
+
+/* ========== AVATAR FRAME ANIMATIONS ========== */
+
+/* Pulse Animation */
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+    transform: scale(1.02);
+  }
+}
+
+.frame-pulse {
+  animation: pulse 2s ease-in-out infinite;
+  will-change: box-shadow, transform;
+}
+
+/* Shimmer Animation */
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.frame-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.4) 50%, 
+    transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2.5s linear infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Rainbow Animation */
+@keyframes rainbow {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+.frame-rainbow {
+  animation: rainbow 6s linear infinite;
+  will-change: filter;
+}
+
+/* Fire Animation */
+@keyframes fireFlicker {
+  0%, 100% {
+    box-shadow: 0 0 20px #ff4500, 0 0 40px #ff6b00, inset 0 0 20px rgba(255, 69, 0, 0.3);
+    filter: brightness(1);
+  }
+  25% {
+    box-shadow: 0 0 25px #ff4500, 0 0 50px #ff6b00, inset 0 0 25px rgba(255, 69, 0, 0.4);
+    filter: brightness(1.1);
+  }
+  50% {
+    box-shadow: 0 0 15px #ff4500, 0 0 30px #ff6b00, inset 0 0 15px rgba(255, 69, 0, 0.25);
+    filter: brightness(0.95);
+  }
+  75% {
+    box-shadow: 0 0 30px #ff4500, 0 0 60px #ff6b00, inset 0 0 30px rgba(255, 69, 0, 0.5);
+    filter: brightness(1.15);
+  }
+}
+
+.frame-fire {
+  animation: fireFlicker 2s ease-in-out infinite;
+  will-change: box-shadow, filter;
+}
+
+/* Ice Animation */
+@keyframes iceShimmer {
+  0%, 100% {
+    box-shadow: 0 0 15px #00f5ff, 0 0 30px #00d4ff, inset 0 0 15px rgba(0, 245, 255, 0.2);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 25px #00f5ff, 0 0 50px #00d4ff, inset 0 0 25px rgba(0, 245, 255, 0.4);
+    filter: brightness(1.2);
+  }
+}
+
+.frame-ice {
+  animation: iceShimmer 2.5s ease-in-out infinite;
+  will-change: box-shadow, filter;
+}
+
+/* Lightning Animation */
+@keyframes lightningPulse {
+  0%, 90%, 100% {
+    box-shadow: 0 0 10px #ffeb3b, 0 0 20px #fdd835;
+    filter: brightness(1);
+  }
+  92%, 94%, 96% {
+    box-shadow: 0 0 30px #ffeb3b, 0 0 60px #fdd835, 0 0 90px #ffea00;
+    filter: brightness(1.5);
+  }
+}
+
+.frame-lightning {
+  animation: lightningPulse 3s ease-in-out infinite;
+  will-change: box-shadow, filter;
+}
+
+/* Shadow Animation */
+@keyframes shadowDrift {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(66, 66, 66, 0.6);
+    filter: brightness(0.9);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.9), 0 0 60px rgba(66, 66, 66, 0.8);
+    filter: brightness(0.7);
+  }
+}
+
+.frame-shadow {
+  animation: shadowDrift 3s ease-in-out infinite;
+  will-change: box-shadow, filter;
+}
+
+/* Nature Animation */
+@keyframes natureGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px #4caf50, 0 0 30px #66bb6a;
+    filter: brightness(1) hue-rotate(0deg);
+  }
+  50% {
+    box-shadow: 0 0 25px #4caf50, 0 0 50px #66bb6a;
+    filter: brightness(1.1) hue-rotate(10deg);
+  }
+}
+
+.frame-nature {
+  animation: natureGlow 2s ease-in-out infinite;
+  will-change: box-shadow, filter;
+}
+
+/* Light/Holy Animation */
+@keyframes holyGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px #fff9c4, 0 0 40px #ffeb3b, 0 0 60px #fdd835;
+    filter: brightness(1.2);
+  }
+  50% {
+    box-shadow: 0 0 30px #fff9c4, 0 0 60px #ffeb3b, 0 0 90px #fdd835;
+    filter: brightness(1.4);
+  }
+}
+
+.frame-light {
+  animation: holyGlow 2s ease-in-out infinite;
+  will-change: box-shadow, filter;
+}
+
+/* Diamond Animation */
+@keyframes diamondSparkle {
+  0%, 100% {
+    box-shadow: 0 0 20px #b9f2ff, 0 0 40px #81d4fa;
+    filter: brightness(1.3) contrast(1.2);
+  }
+  25%, 75% {
+    box-shadow: 0 0 30px #b9f2ff, 0 0 60px #81d4fa, 0 0 80px #4fc3f7;
+    filter: brightness(1.5) contrast(1.3);
+  }
+  50% {
+    box-shadow: 0 0 25px #b9f2ff, 0 0 50px #81d4fa;
+    filter: brightness(1.4) contrast(1.25);
+  }
+}
+
+.frame-diamond {
+  animation: diamondSparkle 2s ease-in-out infinite;
+  will-change: box-shadow, filter;
+}
+
+/* Master Animation */
+@keyframes masterAura {
+  0%, 100% {
+    box-shadow: 0 0 25px #ef6c00, 0 0 50px #ff6f00, 0 0 75px #ff8f00;
+    filter: brightness(1.2);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 35px #ef6c00, 0 0 70px #ff6f00, 0 0 105px #ff8f00;
+    filter: brightness(1.4);
+    transform: scale(1.03);
+  }
+}
+
+.frame-master {
+  animation: masterAura 2.5s ease-in-out infinite;
+  will-change: box-shadow, filter, transform;
+}
+
+/* Grandmaster Animation */
+@keyframes grandmasterSupreme {
+  0%, 100% {
+    box-shadow: 
+      0 0 30px #ff4081, 
+      0 0 60px #f50057, 
+      0 0 90px #c51162,
+      inset 0 0 20px rgba(255, 64, 129, 0.3);
+    filter: brightness(1.3) saturate(1.2);
+    transform: scale(1);
+  }
+  33% {
+    box-shadow: 
+      0 0 40px #ff4081, 
+      0 0 80px #f50057, 
+      0 0 120px #c51162,
+      inset 0 0 30px rgba(255, 64, 129, 0.5);
+    filter: brightness(1.5) saturate(1.4);
+    transform: scale(1.04);
+  }
+  66% {
+    box-shadow: 
+      0 0 35px #ff4081, 
+      0 0 70px #f50057, 
+      0 0 105px #c51162,
+      inset 0 0 25px rgba(255, 64, 129, 0.4);
+    filter: brightness(1.4) saturate(1.3);
+    transform: scale(1.02);
+  }
+}
+
+.frame-grandmaster {
+  animation: grandmasterSupreme 2s ease-in-out infinite;
+  will-change: box-shadow, filter, transform;
+}
+
+/* ========== BACKGROUND ANIMATIONS ========== */
+
+/* Gradient Pulse */
+@keyframes gradientPulse {
+  0%, 100% {
+    opacity: 0.8;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.2);
+  }
+}
+
+.bg-gradient-pulse {
+  animation: gradientPulse 3s ease-in-out infinite;
+  will-change: opacity, filter;
+}
+
+/* Gradient Shift */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.bg-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+  will-change: background-position;
+}
+
+/* Fire Background */
+@keyframes fireBackground {
+  0%, 100% {
+    background-position: 0% 0%;
+    filter: brightness(1) hue-rotate(0deg);
+  }
+  25% {
+    background-position: 25% 25%;
+    filter: brightness(1.1) hue-rotate(5deg);
+  }
+  50% {
+    background-position: 50% 50%;
+    filter: brightness(0.95) hue-rotate(0deg);
+  }
+  75% {
+    background-position: 75% 25%;
+    filter: brightness(1.05) hue-rotate(-5deg);
+  }
+}
+
+.bg-fire {
+  background-size: 200% 200%;
+  animation: fireBackground 6s ease-in-out infinite;
+  will-change: background-position, filter;
+}
+
+/* Ice Background */
+@keyframes iceBackground {
+  0%, 100% {
+    background-position: 0% 0%;
+    filter: brightness(1);
+  }
+  50% {
+    background-position: 100% 100%;
+    filter: brightness(1.15);
+  }
+}
+
+.bg-ice {
+  background-size: 150% 150%;
+  animation: iceBackground 10s linear infinite;
+  will-change: background-position, filter;
+}
+
+/* Lightning Background */
+@keyframes lightningBackground {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.bg-lightning {
+  background-size: 200% 200%;
+  animation: lightningBackground 15s linear infinite;
+  will-change: background-position;
+}
+
+/* Water Background */
+@keyframes waterFlow {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
+}
+
+.bg-water {
+  background-size: 150% 150%;
+  animation: waterFlow 12s linear infinite;
+  will-change: background-position;
+}
+
+/* Space Background */
+@keyframes spaceParallax {
+  0% {
+    background-position: 0% 0%, 0% 0%, 0% 0%;
+  }
+  100% {
+    background-position: 100% 0%, 50% 0%, 25% 0%;
+  }
+}
+
+.bg-space {
+  animation: spaceParallax 60s linear infinite;
+  will-change: background-position;
+}
+
+/* Galaxy Pan */
+@keyframes galaxyPan {
+  0% {
+    background-position: 0% 50%;
+    transform: scale(1);
+  }
+  50% {
+    background-position: 100% 50%;
+    transform: scale(1.05);
+  }
+  100% {
+    background-position: 0% 50%;
+    transform: scale(1);
+  }
+}
+
+.bg-galaxy {
+  background-size: 200% 200%;
+  animation: galaxyPan 40s ease-in-out infinite;
+  will-change: background-position, transform;
+}
+
+/* Aurora */
+@keyframes aurora {
+  0%, 100% {
+    background-position: 0% 50%;
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: hue-rotate(30deg);
+  }
+}
+
+.bg-aurora {
+  background-size: 200% 200%;
+  animation: aurora 15s ease-in-out infinite;
+  will-change: background-position, filter;
+}
+
+/* ========== PARTICLE EFFECTS ========== */
+
+/* Fire Particles */
+@keyframes fireParticleFloat {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-30px) translateX(10px) scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-60px) translateX(-5px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+.effect-fire-particles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.effect-fire-particles::before,
+.effect-fire-particles::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 4px;
+  height: 4px;
+  background: radial-gradient(circle, #ff6b00, #ff4500);
+  border-radius: 50%;
+  animation: fireParticleFloat 2s ease-out infinite;
+}
+
+.effect-fire-particles::before {
+  left: 30%;
+  animation-delay: 0s;
+}
+
+.effect-fire-particles::after {
+  left: 70%;
+  animation-delay: 1s;
+}
+
+/* Snow Drift */
+@keyframes snowDrift {
+  0% {
+    transform: translateY(-10px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110%) translateX(20px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.effect-snow-drift {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.effect-snow-drift::before,
+.effect-snow-drift::after {
+  content: '';
+  position: absolute;
+  top: -10px;
+  width: 3px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: snowDrift 6s linear infinite;
+}
+
+.effect-snow-drift::before {
+  left: 25%;
+  animation-delay: 0s;
+}
+
+.effect-snow-drift::after {
+  left: 75%;
+  animation-delay: 3s;
+}
+
+/* Electric Sparks */
+@keyframes sparkBurst {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--spark-x), var(--spark-y)) scale(0);
+    opacity: 0;
+  }
+}
+
+.effect-sparks {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Energy Rings */
+@keyframes energyRing {
+  0% {
+    transform: scale(0.8) rotate(0deg);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(0.8) rotate(360deg);
+    opacity: 0.8;
+  }
+}
+
+.effect-energy-rings {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.effect-energy-rings::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120%;
+  height: 120%;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: energyRing 3s linear infinite;
+}
+
+/* Floating Light Motes */
+@keyframes floatMote {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-20px) translateX(10px);
+    opacity: 1;
+  }
+}
+
+.effect-floating-motes {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.effect-floating-motes::before,
+.effect-floating-motes::after {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: radial-gradient(circle, #fff, transparent);
+  border-radius: 50%;
+  animation: floatMote 4s ease-in-out infinite;
+}
+
+.effect-floating-motes::before {
+  top: 30%;
+  left: 20%;
+  animation-delay: 0s;
+}
+
+.effect-floating-motes::after {
+  top: 60%;
+  right: 20%;
+  animation-delay: 2s;
+}
+
+/* ========== RANK MEDAL ANIMATIONS ========== */
+
+/* Medal Shine */
+@keyframes medalShine {
+  0%, 100% {
+    filter: brightness(1) contrast(1);
+  }
+  50% {
+    filter: brightness(1.3) contrast(1.2);
+  }
+}
+
+.rank-medal {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+  border: 3px solid;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: medalShine 2s ease-in-out infinite;
+  will-change: filter;
+}
+
+/* Rank Medal Glow */
+.rank-medal-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120%;
+  height: 120%;
+  border-radius: 50%;
+  opacity: 0.5;
+  filter: blur(10px);
+  animation: pulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ========== UI INTERACTIONS ========== */
+
+/* Hover/Tap Animation */
+@keyframes tapFeedback {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.tap-feedback:active {
+  animation: tapFeedback 0.15s ease-out;
+}
+
+/* Equip Transition */
+@keyframes equipTransition {
+  0% {
+    transform: scale(0.8) rotate(-10deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1) rotate(5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.equip-animation {
+  animation: equipTransition 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Unequip Transition */
+@keyframes unequipTransition {
+  0% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8) rotate(10deg);
+    opacity: 0;
+  }
+}
+
+.unequip-animation {
+  animation: unequipTransition 0.3s ease-out;
+}
+
+/* Locked Item Indicator */
+@keyframes lockedPulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.item-locked {
+  filter: grayscale(0.8);
+  opacity: 0.5;
+  animation: lockedPulse 2s ease-in-out infinite;
+  cursor: not-allowed;
+}
+
+/* Preview Mode */
+.preview-mode {
+  position: relative;
+  overflow: hidden;
+}
+
+.preview-mode::after {
+  content: 'PREVIEW';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.7rem;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* ========== PERFORMANCE OPTIMIZATIONS ========== */
+
+/* GPU Acceleration Hint */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Reduce Motion for Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  /* Reduce particle density on mobile */
+  .effect-fire-particles::before,
+  .effect-snow-drift::before {
+    display: none;
+  }
+  
+  /* Simplify complex animations */
+  .frame-grandmaster,
+  .frame-master {
+    animation-duration: 3s;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .bg-light {
+    filter: brightness(0.3);
+  }
+}
+
+/* Light Mode Support */
+@media (prefers-color-scheme: light) {
+  .bg-dark,
+  .frame-shadow {
+    filter: brightness(1.5);
+  }
+}
