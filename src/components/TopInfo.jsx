@@ -1,7 +1,59 @@
 import React from 'react';
 import { DIFFICULTY_INFO } from '../utils/botAI';
 
-function TopInfo({ roomId, localXScore, localOScore, onlineXScore, onlineOScore, gameState, opponentLeft, gameMode, botDifficulty, playerXName, playerOName }) {
+const frameColors = {
+  frame_basic: '#667eea',
+  frame_gold: '#ffd700',
+  frame_rainbow: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+  frame_fire: '#ff4500',
+  frame_ice: '#00f5ff',
+  frame_diamond: '#b9f2ff'
+};
+
+const backgroundColors = {
+  bg_none: 'rgba(26, 26, 46, 0.6)',
+  bg_purple: '#667eea',
+  bg_green: '#00e676',
+  bg_red: '#ff4b5c',
+  bg_galaxy: '#1a1a2e'
+};
+
+const renderAvatarChip = (name = 'P', avatar) => {
+  const letter = name.charAt(0).toUpperCase();
+  const frame = avatar?.frame && frameColors[avatar.frame] ? frameColors[avatar.frame] : '#667eea';
+  const background = avatar?.background && backgroundColors[avatar.background]
+    ? backgroundColors[avatar.background]
+    : 'rgba(26, 26, 46, 0.6)';
+
+  return (
+    <div
+      className="avatar-chip"
+      style={{
+        background,
+        border: avatar?.frame === 'frame_rainbow' ? '3px solid transparent' : `3px solid ${frame}`,
+        backgroundImage: avatar?.frame === 'frame_rainbow' ? frame : undefined
+      }}
+    >
+      <span className="avatar-chip-letter">{letter}</span>
+    </div>
+  );
+};
+
+function TopInfo({
+  roomId,
+  localXScore,
+  localOScore,
+  onlineXScore,
+  onlineOScore,
+  gameState,
+  opponentLeft,
+  gameMode,
+  botDifficulty,
+  playerXName,
+  playerOName,
+  playerXAvatar,
+  playerOAvatar
+}) {
   const getDifficultyBadge = () => {
     if (gameMode === 'bot' && botDifficulty) {
       const info = DIFFICULTY_INFO[botDifficulty];
@@ -48,18 +100,42 @@ function TopInfo({ roomId, localXScore, localOScore, onlineXScore, onlineOScore,
 
       {gameMode === 'online' ? (
         <>
-          <p>{playerXName || 'Player X'}: {onlineXScore}</p>
-          <p>{playerOName || 'Player O'}: {onlineOScore}</p>
+          <p className="score-row">
+            {renderAvatarChip(playerXName, playerXAvatar)}
+            <span className="score-name">{playerXName || 'Player X'}:</span>
+            <span className="score-value">{onlineXScore}</span>
+          </p>
+          <p className="score-row">
+            {renderAvatarChip(playerOName, playerOAvatar)}
+            <span className="score-name">{playerOName || 'Player O'}:</span>
+            <span className="score-value">{onlineOScore}</span>
+          </p>
         </>
       ) : gameMode === 'bot' ? (
         <>
-          <p>You (X): {localXScore}</p>
-          <p>Bot (O): {localOScore}</p>
+          <p className="score-row">
+            {renderAvatarChip('You', playerXAvatar)}
+            <span className="score-name">You (X):</span>
+            <span className="score-value">{localXScore}</span>
+          </p>
+          <p className="score-row">
+            {renderAvatarChip('Bot', playerOAvatar)}
+            <span className="score-name">Bot (O):</span>
+            <span className="score-value">{localOScore}</span>
+          </p>
         </>
       ) : (
         <>
-          <p>{playerXName || 'Player X'}: {localXScore}</p>
-          <p>{playerOName || 'Player O'}: {localOScore}</p>
+          <p className="score-row">
+            {renderAvatarChip(playerXName, playerXAvatar)}
+            <span className="score-name">{playerXName || 'Player X'}:</span>
+            <span className="score-value">{localXScore}</span>
+          </p>
+          <p className="score-row">
+            {renderAvatarChip(playerOName, playerOAvatar)}
+            <span className="score-name">{playerOName || 'Player O'}:</span>
+            <span className="score-value">{localOScore}</span>
+          </p>
         </>
       )}
 

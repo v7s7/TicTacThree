@@ -65,7 +65,8 @@ export const dailyCooldownMs = (lastClaim) => {
 const randomCoinReward = () => 50 + Math.floor(Math.random() * 101); // 50-150
 
 export const rollMysteryReward = (ownedIds = []) => {
-  const items = getAllShopItems();
+  // Exclude ranked-gated cosmetics from mystery boxes
+  const items = getAllShopItems().filter((item) => !item.rankRequired);
   const unowned = items.filter((item) => !ownedIds.includes(item.id));
 
   if (unowned.length > 0 && Math.random() < 0.7) {

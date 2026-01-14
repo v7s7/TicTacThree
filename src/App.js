@@ -942,6 +942,8 @@ function App() {
               botDifficulty={botDifficulty}
               playerXName={playerXName}
               playerOName={playerOName}
+              playerXAvatar={playerSymbol === 'X' ? userAvatar : null}
+              playerOAvatar={playerSymbol === 'O' ? userAvatar : null}
             />
 
             <Board

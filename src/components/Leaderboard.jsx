@@ -16,6 +16,7 @@ function Leaderboard({ onClose }) {
     setLoading(true);
     try {
       const usersRef = collection(db, 'users');
+      // Order by a stable numeric field; for win rate we still fetch top wins then sort locally
       const q = query(
         usersRef,
         orderBy(sortBy === 'coins' ? 'coins' : 'wins', 'desc'),
@@ -26,15 +27,20 @@ function Leaderboard({ onClose }) {
       const players = [];
       snapshot.forEach((doc) => {
         const data = doc.data();
-        const totalGames = (data.wins || 0) + (data.losses || 0) + (data.draws || 0);
-        const winRate = totalGames > 0 ? ((data.wins || 0) / totalGames * 100).toFixed(1) : 0;
+
+        // Online-only stats: prefer seasonStats, fall back to top-level wins/losses/draws (which are online in this app)
+        const onlineWins = data.seasonStats?.wins ?? data.wins ?? 0;
+        const onlineLosses = data.seasonStats?.losses ?? data.losses ?? 0;
+        const onlineDraws = data.seasonStats?.draws ?? data.draws ?? 0;
+        const totalOnlineGames = onlineWins + onlineLosses + onlineDraws;
+        const winRate = totalOnlineGames > 0 ? ((onlineWins / totalOnlineGames) * 100).toFixed(1) : '0.0';
 
         players.push({
           id: doc.id,
           displayName: data.displayName || 'Unknown',
           coins: data.coins || 0,
-          wins: data.wins || 0,
-          winRate: winRate
+          wins: onlineWins,
+          winRate
         });
       });
 
@@ -67,7 +73,7 @@ function Leaderboard({ onClose }) {
             className={`leaderboard-tab ${sortBy === 'winrate' ? 'active' : ''}`}
             onClick={() => setSortBy('winrate')}
           >
-            Best Win Rate
+            Best Online Win Rate
           </button>
         </div>
 
@@ -92,7 +98,7 @@ function Leaderboard({ onClose }) {
                   ) : (
                     <>
                       <span className="winrate">{player.winRate}%</span>
-                      <span className="wins-small">{player.wins}W</span>
+                      <span className="wins-small">{player.wins}W (online)</span>
                     </>
                   )}
                 </span>
