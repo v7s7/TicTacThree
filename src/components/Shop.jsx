@@ -69,7 +69,7 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
   
   const groupedItems = useMemo(() => {
     const list = [...items];
-    const filtered = mode === 'collection' ? list.filter((item) => isOwned(item.id)) : list;
+    const filtered = mode === 'collection' ? list.filter((item) => inventory.includes(item.id)) : list;
     
     // Group by tier
     const groups = {};

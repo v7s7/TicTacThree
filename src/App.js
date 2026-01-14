@@ -20,7 +20,7 @@ import { nanoid } from 'nanoid';
 import { getBotMove } from './utils/botAI';
 import { getCoins, getStats, awardCoins, updateStats, resetAllData, setCoins as setLocalCoins } from './utils/coinsManager';
 import { soundManager } from './utils/soundManager';
-import { updateRankAfterOnlineMatch, ensureSeasonForUser, getCurrentSeasonId } from './utils/rankManager';
+import { updateRankAfterOnlineMatch, ensureSeasonForUser, getCurrentSeasonId, handleRankChange } from './utils/rankManager';
 import {
   rollMysteryReward,
   canClaimDailyBox,
@@ -78,7 +78,8 @@ function App() {
     seasonId: getCurrentSeasonId(),
     seasonStats: { wins: 0, losses: 0, gamesPlayed: 0 }
   });
-  const [rankUpFlash, setRankUpFlash] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [rankUpFlash, setRankUpFlash] = useState(false); // Reserved for future rank-up animation
   const [processedResultId, setProcessedResultId] = useState(null);
   const [mysteryBoxes, setMysteryBoxes] = useState(0);
   const [boxWinProgress, setBoxWinProgress] = useState(0);
@@ -93,7 +94,7 @@ function App() {
 
   const DAILY_BOX_OPEN_LIMIT = 3;
 
-  const persistBoxState = async (boxes, progress, lastClaim, dailyOpens = dailyBoxOpens) => {
+  const persistBoxState = useCallback(async (boxes, progress, lastClaim, dailyOpens = dailyBoxOpens) => {
     const normalizedDaily = normalizeDailyBoxOpenState(dailyOpens?.date, dailyOpens?.count);
 
     setMysteryBoxes(boxes);
@@ -112,9 +113,9 @@ function App() {
     } else {
       saveLocalBoxState(boxes, progress, lastClaim, normalizedDaily);
     }
-  };
+  }, [user, dailyBoxOpens]);
 
-  const applyWinTowardBox = async () => {
+  const applyWinTowardBox = useCallback(async () => {
     const nextProgress = boxWinProgress + 1;
     let newBoxes = mysteryBoxes;
     let progress = nextProgress;
@@ -124,7 +125,7 @@ function App() {
       soundManager.playCoin();
     }
     await persistBoxState(newBoxes, progress, lastDailyBoxClaim);
-  };
+  }, [boxWinProgress, mysteryBoxes, lastDailyBoxClaim, persistBoxState]);
 
   const handleClaimDailyBox = async () => {
     if (!canClaimDailyBox(lastDailyBoxClaim)) return;
@@ -388,6 +389,7 @@ function App() {
       }
     });
     return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, playerSymbol, opponentId]);
 
   // Bot move handler
@@ -792,14 +794,36 @@ function App() {
       try {
         const rankResult = await updateRankAfterOnlineMatch(getCurrentUserId(user), outcome);
         if (rankResult) {
+          const oldRank = rankInfo.rank;
+          const newRank = rankResult.rank;
+          
+          // Check if rank-locked frame should be unequipped
+          const rankChangeResult = handleRankChange(oldRank, newRank, userAvatar.frame);
+          
           setRankInfo((prev) => ({
             ...prev,
-            rank: rankResult.rank,
+            rank: newRank,
             seasonScore: rankResult.seasonScore,
             seasonStats: { ...rankResult.seasonStats, seasonId: rankResult.seasonId },
             seasonId: rankResult.seasonId,
             lastSeasonRank: prev.lastSeasonRank || rankResult.previousRank || null
           }));
+          
+          // Auto-unequip rank-locked frame if rank dropped
+          if (rankChangeResult.shouldUnequipFrame) {
+            setUserAvatar(prev => ({
+              ...prev,
+              frame: rankChangeResult.newFrame
+            }));
+            
+            // Update Firestore
+            if (user && !checkIsGuest(user)) {
+              await updateDoc(doc(db, 'users', user.uid), {
+                equippedFrame: rankChangeResult.newFrame
+              });
+            }
+          }
+          
           if (rankResult.rankUp) {
             setRankUpFlash(true);
             setTimeout(() => setRankUpFlash(false), 1200);
@@ -866,7 +890,7 @@ function App() {
       updateStats('draw', gameMode, botDifficulty);
       setStats(getStats());
     }
-  }, [gameMode, botDifficulty, playerSymbol, applyWinTowardBox, user]);
+  }, [gameMode, botDifficulty, playerSymbol, applyWinTowardBox, user, rankInfo.rank, userAvatar.frame]);
 
   // Show loading while checking auth
   if (authLoading) {
