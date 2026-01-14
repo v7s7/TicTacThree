@@ -390,6 +390,250 @@ export const ANIMATION_EFFECTS = {
     className: 'effect-gem-glow',
     duration: '2.5s',
     description: 'Precious gem glow'
+  },
+  
+  // ========== ADDITIONAL MEDAL EFFECTS ==========
+  subtleGlow: {
+    id: 'subtleGlow',
+    name: 'Subtle Glow',
+    type: 'glow',
+    className: 'effect-subtle-glow',
+    duration: '2s',
+    description: 'Gentle subtle glow'
+  },
+  
+  metalShine: {
+    id: 'metalShine',
+    name: 'Metal Shine',
+    type: 'glow',
+    className: 'effect-metal-shine',
+    duration: '2.5s',
+    description: 'Metallic shine effect'
+  },
+  
+  goldGlow: {
+    id: 'goldGlow',
+    name: 'Gold Glow',
+    type: 'glow',
+    className: 'effect-gold-glow',
+    duration: '2s',
+    description: 'Golden radiance'
+  },
+  
+  platinumGlow: {
+    id: 'platinumGlow',
+    name: 'Platinum Glow',
+    type: 'glow',
+    className: 'effect-platinum-glow',
+    duration: '2.5s',
+    description: 'Platinum shimmer'
+  },
+  
+  subtleParticles: {
+    id: 'subtleParticles',
+    name: 'Subtle Particles',
+    type: 'particle',
+    className: 'effect-subtle-particles',
+    particleCount: 8,
+    duration: '3s',
+    description: 'Gentle floating particles'
+  },
+  
+  prismGlow: {
+    id: 'prismGlow',
+    name: 'Prism Glow',
+    type: 'glow',
+    className: 'effect-prism-glow',
+    duration: '2s',
+    description: 'Prismatic light refraction'
+  },
+  
+  sparkles: {
+    id: 'sparkles',
+    name: 'Sparkles',
+    type: 'particle',
+    className: 'effect-sparkles',
+    particleCount: 10,
+    duration: '2s',
+    description: 'Twinkling sparkles'
+  },
+  
+  masterShine: {
+    id: 'masterShine',
+    name: 'Master Shine',
+    type: 'glow',
+    className: 'effect-master-shine',
+    duration: '2.5s',
+    description: 'Master rank metallic shine'
+  },
+  
+  flamingGlow: {
+    id: 'flamingGlow',
+    name: 'Flaming Glow',
+    type: 'glow',
+    className: 'effect-flaming-glow',
+    duration: '2s',
+    description: 'Fiery glowing aura'
+  },
+  
+  gmShine: {
+    id: 'gmShine',
+    name: 'Grandmaster Shine',
+    type: 'glow',
+    className: 'effect-gm-shine',
+    duration: '2s',
+    description: 'Ultimate grandmaster shine'
+  },
+  
+  supremeGlow: {
+    id: 'supremeGlow',
+    name: 'Supreme Glow',
+    type: 'glow',
+    className: 'effect-supreme-glow',
+    duration: '2s',
+    description: 'Supreme prestige glow'
+  },
+  
+  // ========== MYTHIC EFFECTS ==========
+  scales: {
+    id: 'scales',
+    name: 'Dragon Scales',
+    type: 'overlay',
+    className: 'effect-scales',
+    duration: '3s',
+    description: 'Shimmering dragon scales'
+  },
+  
+  rebirth: {
+    id: 'rebirth',
+    name: 'Rebirth',
+    type: 'flash',
+    className: 'effect-rebirth',
+    duration: '2s',
+    description: 'Phoenix rebirth flash'
+  },
+  
+  // ========== SEASONAL EFFECTS ==========
+  snowfall: {
+    id: 'snowfall',
+    name: 'Snowfall',
+    type: 'particle',
+    className: 'effect-snowfall',
+    particleCount: 25,
+    duration: '8s',
+    description: 'Falling snowflakes'
+  },
+  
+  frostCrystals: {
+    id: 'frostCrystals',
+    name: 'Frost Crystals',
+    type: 'particle',
+    className: 'effect-frost-crystals',
+    particleCount: 12,
+    duration: '4s',
+    description: 'Floating frost crystals'
+  },
+  
+  ghostWisps: {
+    id: 'ghostWisps',
+    name: 'Ghost Wisps',
+    type: 'particle',
+    className: 'effect-ghost-wisps',
+    particleCount: 8,
+    duration: '5s',
+    description: 'Spooky ghost wisps'
+  },
+  
+  pumpkinGlow: {
+    id: 'pumpkinGlow',
+    name: 'Pumpkin Glow',
+    type: 'glow',
+    className: 'effect-pumpkin-glow',
+    duration: '2s',
+    description: 'Orange pumpkin glow'
+  },
+  
+  // ========== ADDITIONAL BACKGROUND EFFECTS ==========
+  heatWaves: {
+    id: 'heatWaves',
+    name: 'Heat Waves',
+    type: 'distortion',
+    className: 'effect-heat-waves',
+    duration: '3s',
+    description: 'Rippling heat waves'
+  },
+  
+  thunder: {
+    id: 'thunder',
+    name: 'Thunder',
+    type: 'flash',
+    className: 'effect-thunder',
+    duration: '0.5s',
+    description: 'Thunder flash effect'
+  },
+  
+  stars: {
+    id: 'stars',
+    name: 'Stars',
+    type: 'background',
+    className: 'effect-stars',
+    duration: '30s',
+    description: 'Twinkling star background'
+  },
+  
+  starfield: {
+    id: 'starfield',
+    name: 'Star Field',
+    type: 'background',
+    className: 'effect-starfield',
+    duration: '40s',
+    description: 'Dense star field'
+  },
+  
+  cameraPan: {
+    id: 'cameraPan',
+    name: 'Camera Pan',
+    type: 'background',
+    className: 'effect-camera-pan',
+    duration: '30s',
+    description: 'Slow camera panning motion'
+  },
+  
+  colorShift: {
+    id: 'colorShift',
+    name: 'Color Shift',
+    type: 'background',
+    className: 'effect-color-shift',
+    duration: '10s',
+    description: 'Gradual color shifting'
+  },
+  
+  starry: {
+    id: 'starry',
+    name: 'Starry',
+    type: 'background',
+    className: 'effect-starry',
+    duration: '20s',
+    description: 'Starry night background'
+  },
+  
+  volcanoSmoke: {
+    id: 'volcanoSmoke',
+    name: 'Volcano Smoke',
+    type: 'particle',
+    className: 'effect-volcano-smoke',
+    particleCount: 15,
+    duration: '6s',
+    description: 'Rising volcanic smoke'
+  },
+  
+  dramaMoment: {
+    id: 'dramaMoment',
+    name: 'Drama Moment',
+    type: 'flash',
+    className: 'effect-drama-moment',
+    duration: '1s',
+    description: 'Dramatic lighting moment'
   }
 };
 
