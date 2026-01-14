@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { SHOP_ITEMS } from '../utils/shopManager';
+import { getAllAvatarFrames, SHOP_ITEMS, isRankLocked } from '../utils/shopManager';
 import { soundManager } from '../utils/soundManager';
 
 const rankOrder = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master', 'Grandmaster'];
@@ -8,6 +8,13 @@ const meetsRank = (needed, current) => {
   const needIdx = rankOrder.indexOf(needed);
   const curIdx = rankOrder.indexOf(current || 'Bronze');
   return curIdx >= needIdx;
+};
+
+const TIER_ORDER = ['free', 'basic', 'custom'];
+const TIER_NAMES = {
+  free: 'Free Avatars',
+  basic: 'Basic Backgrounds',
+  custom: 'Custom Uploaded'
 };
 
 function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, initialView = 'store', onEquip }) {
@@ -19,6 +26,12 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
   }, [initialView]);
 
   const handlePurchase = (item) => {
+    if (isRankLocked(item)) {
+      soundManager.playError();
+      alert('This item is rank-locked and cannot be purchased!');
+      return;
+    }
+    
     if (coins < item.price) {
       soundManager.playError();
       alert('Not enough coins!');
@@ -47,18 +60,26 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
     }
   };
 
-  const items = selectedTab === 'frames' ? SHOP_ITEMS.avatarFrames : SHOP_ITEMS.avatarBackgrounds;
+  const items = selectedTab === 'frames' ? getAllAvatarFrames() : SHOP_ITEMS.avatarBackgrounds;
   const isOwned = (itemId) => inventory.includes(itemId);
-  const sortedItems = useMemo(() => {
+  
+  const groupedItems = useMemo(() => {
     const list = [...items];
-    const filtered = mode === 'collection' ? list.filter((item) => isOwned(item.id)) : list;
-    if (mode === 'collection') {
-      return filtered.sort((a, b) => a.name.localeCompare(b.name));
-    }
-    return filtered;
+    const filtered = mode === 'collection' ? list.filter((item) => inventory.includes(item.id)) : list;
+    
+    // Group by tier
+    const groups = {};
+    TIER_ORDER.forEach(tier => {
+      groups[tier] = filtered.filter(item => item.tier === tier);
+    });
+    
+    return groups;
   }, [items, mode, inventory]);
 
   const lockReason = (item) => {
+    if (isRankLocked(item) && !meetsRank(item.rankRequired, rankInfo?.rank)) {
+      return `Requires ${item.rankRequired} Rank`;
+    }
     if (item.rankRequired && !meetsRank(item.rankRequired, rankInfo?.rank)) {
       return `Requires ${item.rankRequired}`;
     }
@@ -70,6 +91,11 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
       return equippedItems.frame === itemId;
     }
     return equippedItems.background === itemId;
+  };
+
+  const getAnimationClass = (item) => {
+    // No animations in simplified version
+    return '';
   };
 
   return (
@@ -119,58 +145,82 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
           </button>
         </div>
 
-        <div className="shop-items-grid">
-          {sortedItems.length === 0 && mode === 'collection' && (
+        <div className="shop-items-container">
+          {mode === 'collection' && Object.values(groupedItems).flat().length === 0 && (
             <div className="shop-empty">You have not unlocked anything yet.</div>
           )}
-          {sortedItems.map((item) => {
-            const owned = isOwned(item.id);
-            const locked = lockReason(item);
+          
+          {TIER_ORDER.map(tier => {
+            const tierItems = groupedItems[tier];
+            if (!tierItems || tierItems.length === 0) return null;
+            
             return (
-              <div key={item.id} className={`shop-item ${locked ? 'locked' : ''}`}>
-              <div
-                className="shop-item-preview"
-                style={{
-                  background: selectedTab === 'backgrounds' ? item.color : 'rgba(26, 26, 46, 0.6)',
-                  border: selectedTab === 'frames' ? `3px solid ${item.color}` : 'none'
-                }}
-              >
-                <div className="shop-item-letter">A</div>
-                {item.animated && <div className="item-badge glow">Animated</div>}
-                {locked && <div className="item-badge lock">{locked}</div>}
-                {owned && !locked && <div className="item-badge owned">Owned</div>}
-              </div>
+              <div key={tier} className="shop-tier-section">
+                <h3 className="shop-tier-title">{TIER_NAMES[tier]}</h3>
+                <div className="shop-items-grid">
+                  {tierItems.map((item) => {
+                    const owned = isOwned(item.id);
+                    const locked = lockReason(item);
+                    const animClass = getAnimationClass(item);
+                    
+                    return (
+                      <div key={item.id} className={`shop-item ${locked ? 'item-locked' : ''} ${animClass}`}>
+                        <div
+                          className={`shop-item-preview ${animClass}`}
+                          style={{
+                            background: selectedTab === 'backgrounds' ? item.color : 'rgba(26, 26, 46, 0.6)',
+                            border: selectedTab === 'frames' ? `3px solid ${item.color}` : 'none'
+                          }}
+                        >
+                          {item.imageUrl ? (
+                            <img 
+                              src={item.imageUrl} 
+                              alt={item.name}
+                              className="shop-item-custom-img"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                            />
+                          ) : (
+                            <div className="shop-item-letter">A</div>
+                          )}
+                          {item.custom && <div className="item-badge glow">Custom</div>}
+                          {locked && <div className="item-badge lock">🔒 {locked}</div>}
+                          {owned && !locked && <div className="item-badge owned">✓ Owned</div>}
+                        </div>
 
-              <div className="shop-item-info">
-                <h4>{item.name}</h4>
-                <p className="shop-item-desc">{item.description}</p>
-                {item.rankRequired && (
-                  <div className="shop-item-rank">Unlocks at {item.rankRequired}</div>
-                )}
+                        <div className="shop-item-info">
+                          <h4>{item.name}</h4>
+                          <p className="shop-item-desc">{item.description}</p>
+                          {item.rankRequired && (
+                            <div className="shop-item-rank">Unlocks at {item.rankRequired}</div>
+                          )}
 
-                <div className="shop-item-actions">
-                  {owned ? (
-                    isEquipped(item.id) ? (
-                      <button className="shop-btn equipped" disabled>
-                        Equipped
-                      </button>
-                    ) : (
-                      <button className="shop-btn equip" onClick={() => handleEquip(item)}>
-                        Equip
-                      </button>
-                    )
-                  ) : (
-                    <button
-                      className="shop-btn buy"
-                      onClick={() => handlePurchase(item)}
-                      disabled={coins < item.price || !!locked || mode === 'collection'}
-                    >
-                      {locked ? locked : `Buy - ${item.price} coins`}
-                    </button>
-                  )}
+                          <div className="shop-item-actions">
+                            {owned ? (
+                              isEquipped(item.id) ? (
+                                <button className="shop-btn equipped" disabled>
+                                  Equipped
+                                </button>
+                              ) : (
+                                <button className="shop-btn equip" onClick={() => handleEquip(item)}>
+                                  Equip
+                                </button>
+                              )
+                            ) : (
+                              <button
+                                className="shop-btn buy"
+                                onClick={() => handlePurchase(item)}
+                                disabled={coins < item.price || !!locked || mode === 'collection'}
+                              >
+                                {locked ? locked : `Buy - ${item.price} coins`}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
             );
           })}
         </div>
