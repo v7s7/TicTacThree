@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage, db } from '../firebase/config';
+import { storage, db } from '../firebase';
 import { 
   addCustomAvatar, 
   updateCustomAvatar, 
