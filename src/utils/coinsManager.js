@@ -12,11 +12,12 @@ export const COIN_REWARDS = {
   bot_medium: 25,
   bot_hard: 50,
   local: 0,
-  online: 30,
+  online: 25,
   draw: 5
 };
 
-const BOT_COIN_LIMIT = 100;
+const BOT_DAILY_LIMIT = 100;
+const BOT_DAILY_KEY = 'tictacthree_bot_daily';
 
 // Get current coins from localStorage
 export const getCoins = () => {
@@ -36,6 +37,27 @@ export const addCoins = (amount) => {
   const newCoins = currentCoins + amount;
   setCoins(newCoins);
   return newCoins;
+};
+
+// Track daily bot earnings to enforce reset at midnight
+const getBotDailyState = () => {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const stored = localStorage.getItem(BOT_DAILY_KEY);
+  if (!stored) return { date: today, earned: 0 };
+
+  try {
+    const parsed = JSON.parse(stored);
+    if (parsed.date !== today) {
+      return { date: today, earned: 0 };
+    }
+    return { date: parsed.date, earned: parsed.earned || 0 };
+  } catch (e) {
+    return { date: today, earned: 0 };
+  }
+};
+
+const saveBotDailyState = (state) => {
+  localStorage.setItem(BOT_DAILY_KEY, JSON.stringify(state));
 };
 
 // Spend coins
@@ -130,10 +152,14 @@ export const awardCoins = (result, gameMode, difficulty = null) => {
     coinsToAdd = gameMode === 'local' ? 0 : COIN_REWARDS.draw;
   }
 
-  // Cap lifetime bot earnings to BOT_COIN_LIMIT
+  // Cap daily bot earnings to BOT_DAILY_LIMIT and reset at midnight
   if (gameMode === 'bot') {
-    const remaining = Math.max(0, BOT_COIN_LIMIT - (stats.botCoinsEarned || 0));
-    coinsToAdd = Math.min(coinsToAdd, remaining);
+    const daily = getBotDailyState();
+    const remainingToday = Math.max(0, BOT_DAILY_LIMIT - daily.earned);
+    coinsToAdd = Math.min(coinsToAdd, remainingToday);
+    if (coinsToAdd > 0) {
+      saveBotDailyState({ date: daily.date, earned: daily.earned + coinsToAdd });
+    }
   }
 
   if (coinsToAdd > 0) {

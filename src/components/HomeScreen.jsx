@@ -19,7 +19,9 @@ function HomeScreen({
   canClaimDaily = false,
   dailyCooldownMs = 0,
   boxOpening = false,
-  boxReward
+  boxReward,
+  boxesOpenedToday = 0,
+  dailyOpenLimit = 3
 }) {
   const isGuest = !user || user.isAnonymous;
   const [view, setView] = useState('main'); // main -> play -> bot
@@ -30,6 +32,9 @@ function HomeScreen({
     const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
     return `${hours}h ${minutes}m`;
   };
+
+  const opensRemaining = Math.max(0, dailyOpenLimit - boxesOpenedToday);
+  const openLimitReached = opensRemaining <= 0;
 
   return (
     <div className="home-screen">
@@ -227,9 +232,15 @@ function HomeScreen({
                 <span className="box-progress-text">Wins to next box: {Math.max(0, 5 - boxWinProgress)}/5</span>
               </div>
               <div className="box-daily">Daily box: {canClaimDaily ? 'Ready now' : formatCooldown(dailyCooldownMs)}</div>
+              <div className="box-daily">Opens left today: {opensRemaining}/{dailyOpenLimit}</div>
               {boxReward && (
                 <div className="box-reward-card home">
-                  {boxReward.type === 'cosmetic' ? (
+                  {boxReward.type === 'limit' ? (
+                    <>
+                      <div className="box-reward-title">Daily Limit Reached</div>
+                      <div className="box-reward-name">Come back tomorrow</div>
+                    </>
+                  ) : boxReward.type === 'cosmetic' ? (
                     <>
                       <div className="box-reward-title">New Cosmetic!</div>
                       <div className="box-reward-name">{boxReward.item.name}</div>
@@ -252,8 +263,8 @@ function HomeScreen({
                 <div className="box-glow" />
               </div>
               <div className="box-actions">
-                <button className="box-btn" onClick={onOpenMysteryBox} disabled={boxOpening || mysteryBoxes <= 0}>
-                  {boxOpening ? 'Opening...' : 'Open Box'}
+                <button className="box-btn" onClick={onOpenMysteryBox} disabled={boxOpening || mysteryBoxes <= 0 || openLimitReached}>
+                  {boxOpening ? 'Opening...' : openLimitReached ? 'Daily limit reached' : `Open Box (${opensRemaining} left)`}
                 </button>
                 <button className="box-btn secondary" onClick={onClaimDailyBox} disabled={!canClaimDaily}>
                   {canClaimDaily ? 'Claim Daily' : 'Daily cooldown'}

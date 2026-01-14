@@ -21,7 +21,16 @@ import { getBotMove } from './utils/botAI';
 import { getCoins, getStats, awardCoins, updateStats, resetAllData, setCoins as setLocalCoins } from './utils/coinsManager';
 import { soundManager } from './utils/soundManager';
 import { updateRankAfterOnlineMatch, ensureSeasonForUser, getCurrentSeasonId } from './utils/rankManager';
-import { rollMysteryReward, canClaimDailyBox, dailyCooldownMs, duplicateToCoins, getLocalBoxState, saveLocalBoxState } from './utils/mysteryBoxManager';
+import {
+  rollMysteryReward,
+  canClaimDailyBox,
+  dailyCooldownMs,
+  duplicateToCoins,
+  getLocalBoxState,
+  saveLocalBoxState,
+  getDailyBoxOpenState,
+  normalizeDailyBoxOpenState
+} from './utils/mysteryBoxManager';
 import {
   onAuthStateChange,
   signOutUser,
@@ -74,6 +83,7 @@ function App() {
   const [mysteryBoxes, setMysteryBoxes] = useState(0);
   const [boxWinProgress, setBoxWinProgress] = useState(0);
   const [lastDailyBoxClaim, setLastDailyBoxClaim] = useState(null);
+  const [dailyBoxOpens, setDailyBoxOpens] = useState(getDailyBoxOpenState());
   const [boxOpening, setBoxOpening] = useState(false);
   const [boxReward, setBoxReward] = useState(null);
   const [shopInitialView, setShopInitialView] = useState('store');
@@ -81,19 +91,26 @@ function App() {
   const [inviteCount, setInviteCount] = useState(0);
   const [latestInviteName, setLatestInviteName] = useState('');
 
-  const persistBoxState = async (boxes, progress, lastClaim) => {
+  const DAILY_BOX_OPEN_LIMIT = 3;
+
+  const persistBoxState = async (boxes, progress, lastClaim, dailyOpens = dailyBoxOpens) => {
+    const normalizedDaily = normalizeDailyBoxOpenState(dailyOpens?.date, dailyOpens?.count);
+
     setMysteryBoxes(boxes);
     setBoxWinProgress(progress);
     setLastDailyBoxClaim(lastClaim);
+    setDailyBoxOpens(normalizedDaily);
 
     if (user && !checkIsGuest(user)) {
       await updateDoc(doc(db, 'users', user.uid), {
         mysteryBoxes: boxes,
         boxWinProgress: progress,
-        lastMysteryBoxClaim: lastClaim || null
+        lastMysteryBoxClaim: lastClaim || null,
+        dailyBoxOpenCount: normalizedDaily.count,
+        dailyBoxOpenDate: normalizedDaily.date
       });
     } else {
-      saveLocalBoxState(boxes, progress, lastClaim);
+      saveLocalBoxState(boxes, progress, lastClaim, normalizedDaily);
     }
   };
 
@@ -118,6 +135,17 @@ function App() {
 
   const handleOpenMysteryBox = async () => {
     if (boxOpening || mysteryBoxes <= 0) return;
+
+    const todayOpens = normalizeDailyBoxOpenState(dailyBoxOpens.date, dailyBoxOpens.count);
+    setDailyBoxOpens(todayOpens);
+
+    if (todayOpens.count >= DAILY_BOX_OPEN_LIMIT) {
+      soundManager.playClick();
+      setBoxReward({ type: 'limit' });
+      return;
+    }
+
+    const nextDailyOpens = { date: todayOpens.date, count: todayOpens.count + 1 };
     setBoxOpening(true);
     setBoxReward(null);
     soundManager.playClick();
@@ -159,7 +187,8 @@ function App() {
         }
       }
 
-      await persistBoxState(mysteryBoxes - 1, boxWinProgress, lastDailyBoxClaim);
+      await persistBoxState(mysteryBoxes - 1, boxWinProgress, lastDailyBoxClaim, nextDailyOpens);
+      setDailyBoxOpens(nextDailyOpens);
       setBoxReward(grantedItem ? { type: 'cosmetic', item: grantedItem } : { type: 'coins', coins: coinsToGrant });
       soundManager.playCoin();
       setBoxOpening(false);
@@ -243,6 +272,7 @@ function App() {
           setMysteryBoxes(userData.data.mysteryBoxes || 0);
           setBoxWinProgress(userData.data.boxWinProgress || 0);
           setLastDailyBoxClaim(userData.data.lastMysteryBoxClaim || null);
+          setDailyBoxOpens(normalizeDailyBoxOpenState(userData.data.dailyBoxOpenDate, userData.data.dailyBoxOpenCount));
         }
       } else {
         // Load from localStorage for guests
@@ -258,6 +288,7 @@ function App() {
         setMysteryBoxes(localBoxState.boxes);
         setBoxWinProgress(localBoxState.progress);
         setLastDailyBoxClaim(localBoxState.lastClaim);
+        setDailyBoxOpens(localBoxState.dailyOpens);
       }
     });
 
@@ -885,6 +916,8 @@ function App() {
             dailyCooldownMs={dailyCooldownMs(lastDailyBoxClaim)}
             boxOpening={boxOpening}
             boxReward={boxReward}
+            boxesOpenedToday={dailyBoxOpens.count}
+            dailyOpenLimit={DAILY_BOX_OPEN_LIMIT}
           />
         ) : gameMode === 'matchmaking' ? (
           <OnlineMatchmaking
