@@ -13,6 +13,7 @@ import Leaderboard from './components/Leaderboard';
 import CoinDisplay from './components/CoinDisplay';
 import Shop from './components/Shop';
 import FriendsList from './components/FriendsList';
+import AdminAvatarManager from './components/AdminAvatarManager';
 import './styles/App.css';
 import { db } from './firebase';
 import { doc, updateDoc, onSnapshot, arrayUnion, getDoc } from 'firebase/firestore';
@@ -21,6 +22,7 @@ import { getBotMove } from './utils/botAI';
 import { getCoins, getStats, awardCoins, updateStats, resetAllData, setCoins as setLocalCoins } from './utils/coinsManager';
 import { soundManager } from './utils/soundManager';
 import { updateRankAfterOnlineMatch, ensureSeasonForUser, getCurrentSeasonId, handleRankChange } from './utils/rankManager';
+import { fetchCustomAvatars, loadCustomAvatars } from './utils/shopManager';
 import {
   rollMysteryReward,
   canClaimDailyBox,
@@ -47,6 +49,7 @@ function App() {
   // Auth state
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [gameState, setGameState] = useState({
     board: Array(9).fill(null),
@@ -196,12 +199,27 @@ function App() {
     }, 650);
   };
 
+  // Load custom avatars for shop (admin uploads)
+  useEffect(() => {
+    const loadCustomAvatarsFromDb = async () => {
+      try {
+        const avatars = await fetchCustomAvatars(db);
+        loadCustomAvatars(avatars);
+      } catch (error) {
+        console.error('Failed to load custom avatars:', error);
+      }
+    };
+
+    loadCustomAvatarsFromDb();
+  }, []);
+
   // Modals
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   // Avatar and inventory
   const [userInventory, setUserInventory] = useState(['frame_basic', 'bg_none']);
@@ -237,6 +255,7 @@ function App() {
     const unsubscribe = onAuthStateChange(async (firebaseUser) => {
       setUser(firebaseUser);
       setAuthLoading(false);
+      setIsAdmin(false);
 
       // Load coins, inventory, avatar, rank, and boxes for authenticated users
       if (firebaseUser && !firebaseUser.isAnonymous) {
@@ -244,6 +263,11 @@ function App() {
         const seasonState = await ensureSeasonForUser(firebaseUser.uid);
 
         if (userData.success) {
+          const adminFlag = Boolean(userData.data?.isAdmin);
+          setIsAdmin(adminFlag);
+          if (!adminFlag) {
+            setShowAdminPanel(false);
+          }
           setCoins(userData.data.coins || 0);
           setUserInventory(userData.data.inventory || ['frame_basic', 'bg_none']);
           setUserAvatar({
@@ -276,6 +300,8 @@ function App() {
           setDailyBoxOpens(normalizeDailyBoxOpenState(userData.data.dailyBoxOpenDate, userData.data.dailyBoxOpenCount));
         }
       } else {
+        setIsAdmin(false);
+        setShowAdminPanel(false);
         // Load from localStorage for guests
         setCoins(getCoins());
         setRankInfo({
@@ -711,6 +737,17 @@ function App() {
     setShowShop(true);
   };
 
+  const handleShowAdminPanel = () => {
+    if (!isAdmin) return;
+    soundManager.playClick();
+    setShowAdminPanel(true);
+  };
+
+  const handleCloseAdminPanel = () => {
+    soundManager.playClick();
+    setShowAdminPanel(false);
+  };
+
   const handleShowAvatarCollection = () => {
     soundManager.playClick();
     setShopInitialView('collection');
@@ -1038,6 +1075,8 @@ function App() {
             onSignOut={handleSignOut}
             userAvatar={userAvatar}
             onOpenShop={handleShowAvatarCollection}
+            isAdmin={isAdmin}
+            onShowAdminPanel={handleShowAdminPanel}
           />
         )}
 
@@ -1087,6 +1126,13 @@ function App() {
             user={user}
             userAvatar={userAvatar}
             onJoinGame={handleMatchFound}
+          />
+        )}
+
+        {showAdminPanel && (
+          <AdminAvatarManager
+            user={user}
+            onClose={handleCloseAdminPanel}
           />
         )}
       </div>

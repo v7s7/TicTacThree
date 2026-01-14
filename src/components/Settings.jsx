@@ -10,7 +10,7 @@ import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { soundManager } from '../utils/soundManager';
 
-function Settings({ soundEnabled, onToggleSound, onResetData, onClose, user, onSignOut, userAvatar, onOpenShop }) {
+function Settings({ soundEnabled, onToggleSound, onResetData, onClose, user, onSignOut, userAvatar, onOpenShop, isAdmin, onShowAdminPanel }) {
   const [newDisplayName, setNewDisplayName] = useState('');
   const [changingName, setChangingName] = useState(false);
   const [nameError, setNameError] = useState('');
@@ -111,6 +111,22 @@ function Settings({ soundEnabled, onToggleSound, onResetData, onClose, user, onS
               )}
             </div>
 
+            {isAdmin && onShowAdminPanel && (
+              <div className="settings-section">
+                <h3>Admin</h3>
+                <p className="name-note">Upload your own avatar designs, set prices, and publish them for players.</p>
+                <button
+                  className="customize-btn"
+                  onClick={() => {
+                    soundManager.playClick();
+                    onShowAdminPanel();
+                  }}
+                >
+                  Open Avatar Manager
+                </button>
+              </div>
+            )}
+
             <div className="settings-section">
               <h3>Change Display Name</h3>
               {canChangeName ? (
@@ -200,6 +216,8 @@ function getBackgroundColor(bgId) {
 function getFrameColor(frameId) {
   const frames = {
     'frame_basic': '#667eea',
+    'frame_clean': '#e0e0e0',
+    'frame_minimal': '#9e9e9e',
     'frame_gold': '#ffd700',
     'frame_rainbow': 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
     'frame_fire': '#ff4500',
