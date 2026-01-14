@@ -2822,3 +2822,261 @@ body {
     font-size: 1.75rem;
   }
 }
+
+/* ============= ADMIN AVATAR MANAGER ============= */
+.admin-panel {
+  max-width: 900px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.admin-subtitle {
+  color: #a0a0a0;
+  margin-top: -10px;
+  margin-bottom: 20px;
+}
+
+.admin-section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.admin-section h3 {
+  margin-top: 0;
+  color: #667eea;
+  font-size: 1.1rem;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #c4c9d7;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 10px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.form-group input[type="color"] {
+  height: 40px;
+  cursor: pointer;
+}
+
+.form-group input[type="file"] {
+  padding: 8px;
+  cursor: pointer;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.file-preview {
+  margin-top: 5px;
+  padding: 8px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #667eea;
+}
+
+.admin-btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.admin-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.admin-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-btn.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.admin-btn.primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+.admin-btn.success {
+  background: linear-gradient(135deg, #00e676 0%, #00c853 100%);
+  color: #000;
+}
+
+.admin-btn.danger {
+  background: linear-gradient(135deg, #ff4b5c 0%, #ff6b7a 100%);
+}
+
+.admin-btn.small {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+.avatar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.avatar-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 15px;
+  transition: all 0.2s ease;
+}
+
+.avatar-item:hover {
+  border-color: rgba(102, 126, 234, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.avatar-view,
+.avatar-edit {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.avatar-preview,
+.avatar-preview-small {
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(26, 26, 46, 0.9);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-preview img,
+.avatar-preview-small img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-info {
+  flex: 1;
+}
+
+.avatar-info h4 {
+  margin: 0 0 5px 0;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.avatar-info p {
+  margin: 0 0 8px 0;
+  color: #a0a0a0;
+  font-size: 0.85rem;
+}
+
+.avatar-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-meta .price {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ffd700;
+}
+
+.avatar-meta .color {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.avatar-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.avatar-edit-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.avatar-edit-form input {
+  padding: 8px;
+  border-radius: 6px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #a0a0a0;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .avatar-view,
+  .avatar-edit {
+    flex-wrap: wrap;
+  }
+
+  .avatar-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

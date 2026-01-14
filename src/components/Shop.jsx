@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { SHOP_ITEMS, isRankLocked } from '../utils/shopManager';
+import { getAllAvatarFrames, SHOP_ITEMS, isRankLocked } from '../utils/shopManager';
 import { soundManager } from '../utils/soundManager';
 
 const rankOrder = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master', 'Grandmaster'];
@@ -10,15 +10,11 @@ const meetsRank = (needed, current) => {
   return curIdx >= needIdx;
 };
 
-const TIER_ORDER = ['free', 'animated', 'elemental', 'mythic', 'premium', 'seasonal', 'rank-locked'];
+const TIER_ORDER = ['free', 'basic', 'custom'];
 const TIER_NAMES = {
   free: 'Free Avatars',
-  animated: 'Animated Avatars',
-  elemental: 'Elemental Avatars',
-  mythic: 'Mythic & Fantasy',
-  premium: 'Premium Collection',
-  seasonal: 'Seasonal & Event',
-  'rank-locked': 'Rank-Locked Exclusive'
+  basic: 'Basic Backgrounds',
+  custom: 'Custom Uploaded'
 };
 
 function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, initialView = 'store', onEquip }) {
@@ -64,7 +60,7 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
     }
   };
 
-  const items = selectedTab === 'frames' ? SHOP_ITEMS.avatarFrames : SHOP_ITEMS.avatarBackgrounds;
+  const items = selectedTab === 'frames' ? getAllAvatarFrames() : SHOP_ITEMS.avatarBackgrounds;
   const isOwned = (itemId) => inventory.includes(itemId);
   
   const groupedItems = useMemo(() => {
@@ -98,8 +94,8 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
   };
 
   const getAnimationClass = (item) => {
-    if (!item.animated || !item.animationType) return '';
-    return `frame-${item.animationType}`;
+    // No animations in simplified version
+    return '';
   };
 
   return (
@@ -176,12 +172,19 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
                             border: selectedTab === 'frames' ? `3px solid ${item.color}` : 'none'
                           }}
                         >
-                          <div className="shop-item-letter">A</div>
-                          {item.animated && <div className="item-badge glow">Animated</div>}
-                          {item.element && <div className="item-badge element">{item.element}</div>}
+                          {item.imageUrl ? (
+                            <img 
+                              src={item.imageUrl} 
+                              alt={item.name}
+                              className="shop-item-custom-img"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                            />
+                          ) : (
+                            <div className="shop-item-letter">A</div>
+                          )}
+                          {item.custom && <div className="item-badge glow">Custom</div>}
                           {locked && <div className="item-badge lock">🔒 {locked}</div>}
                           {owned && !locked && <div className="item-badge owned">✓ Owned</div>}
-                          {isRankLocked(item) && <div className="item-badge rank-locked">Rank Exclusive</div>}
                         </div>
 
                         <div className="shop-item-info">
@@ -206,9 +209,9 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
                               <button
                                 className="shop-btn buy"
                                 onClick={() => handlePurchase(item)}
-                                disabled={coins < item.price || !!locked || mode === 'collection' || isRankLocked(item)}
+                                disabled={coins < item.price || !!locked || mode === 'collection'}
                               >
-                                {isRankLocked(item) ? 'Rank Exclusive' : locked ? locked : `Buy - ${item.price} coins`}
+                                {locked ? locked : `Buy - ${item.price} coins`}
                               </button>
                             )}
                           </div>
