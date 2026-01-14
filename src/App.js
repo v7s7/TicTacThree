@@ -955,6 +955,7 @@ function App() {
               onGameEnd={handlePlayerMove}
               playerXName={playerXName}
               playerOName={playerOName}
+              isBotThinking={isBotThinking}
             />
 
             <Controls
@@ -1060,6 +1061,7 @@ function App() {
               setLatestInviteName('');
             }}
             user={user}
+            userAvatar={userAvatar}
             onJoinGame={handleMatchFound}
           />
         )}

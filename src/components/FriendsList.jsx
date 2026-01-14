@@ -13,7 +13,7 @@ import {
 } from '../utils/friendsManager';
 import { soundManager } from '../utils/soundManager';
 
-function FriendsList({ onClose, user, onJoinGame }) {
+function FriendsList({ onClose, user, onJoinGame, userAvatar }) {
   const [friends, setFriends] = useState([]);
   const [requests, setRequests] = useState([]);
   const [gameInvites, setGameInvites] = useState([]);
@@ -55,7 +55,12 @@ function FriendsList({ onClose, user, onJoinGame }) {
     if (!addFriendName.trim()) return;
 
     setLoading(true);
-    const result = await sendFriendRequest(user.uid, addFriendName, user.displayName || user.email);
+    const result = await sendFriendRequest(
+      user.uid,
+      addFriendName,
+      user.displayName || user.email,
+      { frame: user?.equippedFrame || userAvatar?.frame, background: user?.equippedBackground || userAvatar?.background }
+    );
 
     if (result.success) {
       soundManager.playCoin();
@@ -102,7 +107,8 @@ function FriendsList({ onClose, user, onJoinGame }) {
       user.uid,
       friend.id,
       user.displayName || user.email,
-      friend.displayName
+      friend.displayName,
+      { frame: user?.equippedFrame || userAvatar?.frame, background: user?.equippedBackground || userAvatar?.background }
     );
 
     if (result.success) {
@@ -140,8 +146,26 @@ function FriendsList({ onClose, user, onJoinGame }) {
     setGameInvites((prev) => prev.filter((i) => i.id !== invite.id));
   };
 
-  const renderAvatar = (name, photoUrl) => {
+  const frameColors = {
+    frame_basic: '#667eea',
+    frame_gold: '#ffd700',
+    frame_rainbow: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+    frame_fire: '#ff4500',
+    frame_ice: '#00f5ff',
+    frame_diamond: '#b9f2ff'
+  };
+
+  const backgroundColors = {
+    bg_none: 'rgba(26, 26, 46, 0.6)',
+    bg_purple: '#667eea',
+    bg_green: '#00e676',
+    bg_red: '#ff4b5c',
+    bg_galaxy: '#1a1a2e'
+  };
+
+  const renderAvatar = (name, photoUrl, avatar = {}) => {
     const letter = name?.[0]?.toUpperCase() || '?';
+
     if (photoUrl) {
       return (
         <div
@@ -151,8 +175,20 @@ function FriendsList({ onClose, user, onJoinGame }) {
         />
       );
     }
+
+    const frame = frameColors[avatar.frame] || '#667eea';
+    const background = backgroundColors[avatar.background] || 'rgba(26, 26, 46, 0.6)';
+
     return (
-      <div className="friend-avatar" aria-label={name}>
+      <div
+        className="friend-avatar"
+        aria-label={name}
+        style={{
+          background,
+          border: avatar.frame === 'frame_rainbow' ? '2px solid transparent' : `2px solid ${frame}`,
+          backgroundImage: avatar.frame === 'frame_rainbow' ? frame : undefined
+        }}
+      >
         {letter}
       </div>
     );
@@ -188,7 +224,10 @@ function FriendsList({ onClose, user, onJoinGame }) {
             <div className="friends-list">
               {gameInvites.map((invite) => (
                 <div key={invite.id} className="friend-card invite">
-                  {renderAvatar(invite.fromDisplayName, invite.fromPhotoUrl)}
+                  {renderAvatar(invite.fromDisplayName, invite.fromPhotoUrl, {
+                    frame: invite.fromEquippedFrame,
+                    background: invite.fromEquippedBackground
+                  })}
                   <div className="friend-meta">
                     <div className="friend-name-row">
                       <span className="friend-name">{invite.fromDisplayName}</span>
@@ -219,7 +258,10 @@ function FriendsList({ onClose, user, onJoinGame }) {
             <div className="friends-list">
               {requests.map((request) => (
                 <div key={request.id} className="friend-card request">
-                  {renderAvatar(request.fromDisplayName, request.fromPhotoUrl)}
+                  {renderAvatar(request.fromDisplayName, request.fromPhotoUrl, {
+                    frame: request.fromEquippedFrame,
+                    background: request.fromEquippedBackground
+                  })}
                   <div className="friend-meta">
                     <div className="friend-name-row">
                       <span className="friend-name">{request.fromDisplayName}</span>
@@ -271,7 +313,10 @@ function FriendsList({ onClose, user, onJoinGame }) {
             <div className="friends-list">
               {friends.map((friend) => (
                 <div key={friend.id} className="friend-card">
-                  {renderAvatar(friend.displayName, friend.photoURL || friend.avatarUrl)}
+                  {renderAvatar(friend.displayName, friend.photoURL || friend.avatarUrl, {
+                    frame: friend.equippedFrame,
+                    background: friend.equippedBackground
+                  })}
                   <div className="friend-meta">
                     <div className="friend-name-row">
                       <span className="friend-name">{friend.displayName}</span>

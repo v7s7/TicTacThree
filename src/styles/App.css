@@ -2290,9 +2290,9 @@ body {
 .friend-card.request { border-color: rgba(255, 193, 7, 0.4); background: rgba(255, 193, 7, 0.08); }
 
 .friend-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   background: linear-gradient(135deg, #667eea, #6dd5ed);
   display: inline-flex;
   align-items: center;
@@ -2300,6 +2300,7 @@ body {
   font-weight: 800;
   color: #0b132b;
   text-transform: uppercase;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
 .friend-avatar.with-photo {

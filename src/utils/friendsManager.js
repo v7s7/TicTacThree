@@ -25,7 +25,7 @@ const invertOutcome = (outcome) => {
 };
 
 // Send friend request
-export const sendFriendRequest = async (fromUserId, toDisplayName, fromDisplayName) => {
+export const sendFriendRequest = async (fromUserId, toDisplayName, fromDisplayName, fromAvatar = {}) => {
   try {
     // Find user by display name
     const usersRef = collection(db, 'users');
@@ -57,6 +57,8 @@ export const sendFriendRequest = async (fromUserId, toDisplayName, fromDisplayNa
       to: toUserId,
       fromDisplayName: fromDisplayName,
       toDisplayName: toDisplayName,
+      fromEquippedFrame: fromAvatar.frame || null,
+      fromEquippedBackground: fromAvatar.background || null,
       status: 'pending',
       createdAt: serverTimestamp()
     });
@@ -260,7 +262,7 @@ export const removeFriend = async (userId, friendId) => {
 };
 
 // Create private game invite
-export const inviteFriendToGame = async (fromUserId, toUserId, fromDisplayName, toDisplayName) => {
+export const inviteFriendToGame = async (fromUserId, toUserId, fromDisplayName, toDisplayName, fromAvatar = {}) => {
   try {
     const roomId = nanoid(6).toUpperCase();
 
@@ -288,6 +290,8 @@ export const inviteFriendToGame = async (fromUserId, toUserId, fromDisplayName, 
       to: toUserId,
       fromDisplayName,
       toDisplayName,
+      fromEquippedFrame: fromAvatar.frame || null,
+      fromEquippedBackground: fromAvatar.background || null,
       status: 'pending',
       createdAt: serverTimestamp()
     });

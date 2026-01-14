@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { doc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { soundManager } from '../utils/soundManager';
 
-function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGameEnd, playerXName, playerOName }) {
+function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGameEnd, playerXName, playerOName, isBotThinking }) {
   useEffect(() => {
     if (!roomId) return;
     const roomRef = doc(db, 'rooms', roomId);
@@ -31,6 +31,8 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
 
   const handleCellClick = async (index) => {
     if (!gameState.gameActive || gameState.board[index]) return;
+    // Lock input while bot is thinking or when it's bot's turn
+    if (gameMode === 'bot' && (isBotThinking || gameState.currentPlayer === 'O')) return;
 
     soundManager.playMove();
 
