@@ -9,6 +9,7 @@ import {
 
 const CLOUDINARY_CLOUD = 'dijsoag1f';
 const CLOUDINARY_PRESET = 'ml_default';
+const CLOUDINARY_API_KEY = '414896274751932';
 
 /**
  * Admin Panel for Managing Custom Avatars
@@ -70,17 +71,18 @@ function AdminAvatarManager({ user, onClose }) {
     formData.append('file', file);
     formData.append('upload_preset', CLOUDINARY_PRESET);
     formData.append('folder', 'custom-avatars');
+    formData.append('api_key', CLOUDINARY_API_KEY);
 
     const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
       method: 'POST',
       body: formData
     });
 
+    const data = await response.json();
     if (!response.ok) {
-      throw new Error('Failed to upload image');
+      throw new Error(data?.error?.message || 'Failed to upload image');
     }
 
-    const data = await response.json();
     return data.secure_url || data.url;
   };
 
