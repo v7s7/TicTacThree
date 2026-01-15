@@ -27,16 +27,38 @@ function AdminAvatarManager({ user, onClose }) {
     description: '',
     price: 0,
     color: '#667eea',
-    imageFile: null
+    imageFile: null,
+    ringScale: 1.35,
+    ringOffsetX: 0,
+    ringOffsetY: 0
   });
   
   // Edit mode
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
 
+  const [previewObjectUrl, setPreviewObjectUrl] = useState(null);
+
   useEffect(() => {
     loadAvatars();
   }, []);
+
+  useEffect(() => {
+    if (!newAvatar.imageFile) {
+      if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+      setPreviewObjectUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(newAvatar.imageFile);
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    setPreviewObjectUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newAvatar.imageFile]);
 
   const loadAvatars = async () => {
     try {
@@ -119,7 +141,10 @@ function AdminAvatarManager({ user, onClose }) {
         description: newAvatar.description,
         price: parseInt(newAvatar.price) || 0,
         color: newAvatar.color,
-        imageUrl: imageUrl
+        imageUrl: imageUrl,
+        ringScale: Number(newAvatar.ringScale),
+        ringOffsetX: Number(newAvatar.ringOffsetX),
+        ringOffsetY: Number(newAvatar.ringOffsetY)
       }, db);
       
       // Update local state
@@ -131,7 +156,10 @@ function AdminAvatarManager({ user, onClose }) {
         description: '',
         price: 0,
         color: '#667eea',
-        imageFile: null
+        imageFile: null,
+        ringScale: 1.35,
+        ringOffsetX: 0,
+        ringOffsetY: 0
       });
       
       alert('Avatar added successfully!');
@@ -149,7 +177,10 @@ function AdminAvatarManager({ user, onClose }) {
       name: avatar.name,
       description: avatar.description,
       price: avatar.price,
-      color: avatar.color
+      color: avatar.color,
+      ringScale: Number.isFinite(avatar.ringScale) ? avatar.ringScale : 1.35,
+      ringOffsetX: Number.isFinite(avatar.ringOffsetX) ? avatar.ringOffsetX : 0,
+      ringOffsetY: Number.isFinite(avatar.ringOffsetY) ? avatar.ringOffsetY : 0
     });
   };
 
@@ -266,6 +297,89 @@ function AdminAvatarManager({ user, onClose }) {
               )}
             </div>
 
+            {previewObjectUrl && (
+              <div className="form-group">
+                <label>Ring Position Preview</label>
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ width: 110, height: 110, position: 'relative' }}>
+                    <div
+                      style={{
+                        width: 110,
+                        height: 110,
+                        borderRadius: '50%',
+                        background: 'rgba(26, 26, 46, 0.6)',
+                        border: `3px solid ${newAvatar.color}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        overflow: 'visible'
+                      }}
+                    >
+                      <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#fff', position: 'relative', zIndex: 1 }}>
+                        A
+                      </div>
+                      <img
+                        src={previewObjectUrl}
+                        alt="Ring Preview"
+                        draggable={false}
+                        style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          width: '100%',
+                          height: '100%',
+                          transform: `translate(-50%, -50%) translate(${Number(newAvatar.ringOffsetX) || 0}px, ${Number(newAvatar.ringOffsetY) || 0}px) scale(${Number(newAvatar.ringScale) || 1.35})`,
+                          objectFit: 'contain',
+                          pointerEvents: 'none',
+                          zIndex: 2
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Ring Scale</label>
+                <input
+                  type="range"
+                  min="0.8"
+                  max="2.5"
+                  step="0.05"
+                  value={newAvatar.ringScale}
+                  onChange={(e) => setNewAvatar({ ...newAvatar, ringScale: parseFloat(e.target.value) })}
+                />
+                <div className="file-preview">{Number(newAvatar.ringScale).toFixed(2)}</div>
+              </div>
+              <div className="form-group">
+                <label>Ring Offset X</label>
+                <input
+                  type="range"
+                  min="-40"
+                  max="40"
+                  step="1"
+                  value={newAvatar.ringOffsetX}
+                  onChange={(e) => setNewAvatar({ ...newAvatar, ringOffsetX: parseInt(e.target.value, 10) })}
+                />
+                <div className="file-preview">{Number(newAvatar.ringOffsetX) || 0}px</div>
+              </div>
+              <div className="form-group">
+                <label>Ring Offset Y</label>
+                <input
+                  type="range"
+                  min="-40"
+                  max="40"
+                  step="1"
+                  value={newAvatar.ringOffsetY}
+                  onChange={(e) => setNewAvatar({ ...newAvatar, ringOffsetY: parseInt(e.target.value, 10) })}
+                />
+                <div className="file-preview">{Number(newAvatar.ringOffsetY) || 0}px</div>
+              </div>
+            </div>
+
             <button 
               type="submit" 
               className="admin-btn primary"
@@ -289,7 +403,42 @@ function AdminAvatarManager({ user, onClose }) {
                     // Edit mode
                     <div className="avatar-edit">
                       <div className="avatar-preview-small">
-                        <img src={avatar.imageUrl} alt={avatar.name} />
+                        <div style={{ width: 64, height: 64, position: 'relative', margin: '0 auto' }}>
+                          <div
+                            style={{
+                              width: 64,
+                              height: 64,
+                              borderRadius: '50%',
+                              background: 'rgba(26, 26, 46, 0.6)',
+                              border: `3px solid ${editForm.color || avatar.color || '#667eea'}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              position: 'relative',
+                              overflow: 'visible'
+                            }}
+                          >
+                            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', position: 'relative', zIndex: 1 }}>
+                              A
+                            </div>
+                            <img
+                              src={avatar.imageUrl}
+                              alt={avatar.name}
+                              draggable={false}
+                              style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                width: '100%',
+                                height: '100%',
+                                transform: `translate(-50%, -50%) translate(${Number(editForm.ringOffsetX) || 0}px, ${Number(editForm.ringOffsetY) || 0}px) scale(${Number(editForm.ringScale) || 1.35})`,
+                                objectFit: 'contain',
+                                pointerEvents: 'none',
+                                zIndex: 2
+                              }}
+                            />
+                          </div>
+                        </div>
                       </div>
                       <div className="avatar-edit-form">
                         <input
@@ -315,6 +464,38 @@ function AdminAvatarManager({ user, onClose }) {
                           value={editForm.color}
                           onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
                         />
+
+                        <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+                          <label style={{ fontSize: 12, opacity: 0.85 }}>Ring Scale: {Number(editForm.ringScale || 1.35).toFixed(2)}</label>
+                          <input
+                            type="range"
+                            min="0.8"
+                            max="2.5"
+                            step="0.05"
+                            value={editForm.ringScale}
+                            onChange={(e) => setEditForm({ ...editForm, ringScale: parseFloat(e.target.value) })}
+                          />
+
+                          <label style={{ fontSize: 12, opacity: 0.85 }}>Ring Offset X: {Number(editForm.ringOffsetX || 0)}px</label>
+                          <input
+                            type="range"
+                            min="-40"
+                            max="40"
+                            step="1"
+                            value={editForm.ringOffsetX}
+                            onChange={(e) => setEditForm({ ...editForm, ringOffsetX: parseInt(e.target.value, 10) })}
+                          />
+
+                          <label style={{ fontSize: 12, opacity: 0.85 }}>Ring Offset Y: {Number(editForm.ringOffsetY || 0)}px</label>
+                          <input
+                            type="range"
+                            min="-40"
+                            max="40"
+                            step="1"
+                            value={editForm.ringOffsetY}
+                            onChange={(e) => setEditForm({ ...editForm, ringOffsetY: parseInt(e.target.value, 10) })}
+                          />
+                        </div>
                       </div>
                       <div className="avatar-actions">
                         <button 

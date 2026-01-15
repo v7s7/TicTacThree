@@ -12,6 +12,7 @@ import {
   declineGameInvite
 } from '../utils/friendsManager';
 import { soundManager } from '../utils/soundManager';
+import { getAvatarRenderInfo } from '../utils/shopManager';
 
 function FriendsList({ onClose, user, onJoinGame, userAvatar }) {
   const [friends, setFriends] = useState([]);
@@ -146,23 +147,6 @@ function FriendsList({ onClose, user, onJoinGame, userAvatar }) {
     setGameInvites((prev) => prev.filter((i) => i.id !== invite.id));
   };
 
-  const frameColors = {
-    frame_basic: '#667eea',
-    frame_gold: '#ffd700',
-    frame_rainbow: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
-    frame_fire: '#ff4500',
-    frame_ice: '#00f5ff',
-    frame_diamond: '#b9f2ff'
-  };
-
-  const backgroundColors = {
-    bg_none: 'rgba(26, 26, 46, 0.6)',
-    bg_purple: '#667eea',
-    bg_green: '#00e676',
-    bg_red: '#ff4b5c',
-    bg_galaxy: '#1a1a2e'
-  };
-
   const renderAvatar = (name, photoUrl, avatar = {}) => {
     const letter = name?.[0]?.toUpperCase() || '?';
 
@@ -176,20 +160,23 @@ function FriendsList({ onClose, user, onJoinGame, userAvatar }) {
       );
     }
 
-    const frame = frameColors[avatar.frame] || '#667eea';
-    const background = backgroundColors[avatar.background] || 'rgba(26, 26, 46, 0.6)';
+    const avatarRender = getAvatarRenderInfo(avatar, { borderWidth: 2, contentScale: 0.78 });
 
     return (
       <div
         className="friend-avatar"
         aria-label={name}
-        style={{
-          background,
-          border: avatar.frame === 'frame_rainbow' ? '2px solid transparent' : `2px solid ${frame}`,
-          backgroundImage: avatar.frame === 'frame_rainbow' ? frame : undefined
-        }}
+        style={avatarRender.style}
       >
-        {letter}
+        <span style={{ position: 'relative', zIndex: 1 }}>{letter}</span>
+        {avatarRender.ringUrl && (
+          <img
+            src={avatarRender.ringUrl}
+            alt="Avatar Ring"
+            style={avatarRender.ringStyle}
+            draggable={false}
+          />
+        )}
       </div>
     );
   };
