@@ -200,6 +200,7 @@ function App() {
   };
 
   // Load custom avatars for shop (admin uploads)
+  // Load custom avatars for shop (admin uploads)
   useEffect(() => {
     const loadCustomAvatarsFromDb = async () => {
       try {
@@ -212,6 +213,13 @@ function App() {
 
     loadCustomAvatarsFromDb();
   }, []);
+
+  // Avatar and inventory - MOVED HERE (before useEffect that uses them)
+  const [userInventory, setUserInventory] = useState(['frame_basic', 'bg_none']);
+  const [userAvatar, setUserAvatar] = useState({
+    frame: 'frame_basic',
+    background: 'bg_none'
+  });
 
   // Validate and cleanup equipped avatars after data loads
   useEffect(() => {
@@ -270,13 +278,6 @@ function App() {
   const [showShop, setShowShop] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
-
-  // Avatar and inventory
-  const [userInventory, setUserInventory] = useState(['frame_basic', 'bg_none']);
-  const [userAvatar, setUserAvatar] = useState({
-    frame: 'frame_basic',
-    background: 'bg_none'
-  });
 
   // Local game state
   const [localXScore, setLocalXScore] = useState(0);

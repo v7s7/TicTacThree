@@ -10,7 +10,7 @@ import {
 // Cloudinary config - unsigned uploads (100% FREE & SECURE!)
 // These values are PUBLIC and safe to expose in frontend
 const CLOUDINARY_CLOUD_NAME = 'dijsoag1f';
-const CLOUDINARY_UPLOAD_PRESET = 'ml_default'; // Must be set to "unsigned" in Cloudinary dashboard
+const CLOUDINARY_UPLOAD_PRESET = 'avatars'; // Must be set to "unsigned" in Cloudinary dashboard
 
 /**
  * Admin Panel for Managing Custom Avatars
