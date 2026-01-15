@@ -528,8 +528,8 @@ body {
 /* ============= COIN DISPLAY ============= */
 .coin-display-header {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: 12px;
+  left: 12px;
   right: auto;
   z-index: 100;
 }
@@ -537,17 +537,23 @@ body {
 .coin-container {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 193, 7, 0.15);
-  padding: 8px 15px;
-  border-radius: 20px;
-  border: 2px solid rgba(255, 193, 7, 0.3);
+  gap: 6px;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  border: none;
+}
+
+.coin-icon {
+  font-size: 1rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .coin-count {
-  font-weight: bold;
-  font-size: 1.2rem;
+  font-weight: 800;
+  font-size: 1rem;
   color: #ffc107;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .coin-earned {
@@ -1071,15 +1077,23 @@ body {
 
   .coin-display-header {
     position: fixed;
-    top: 12px;
-    left: 12px;
+    top: 10px;
+    left: 10px;
     right: auto;
     transform: none;
   }
 
   .coin-container {
     justify-content: flex-start;
-    padding: 10px 14px;
+    padding: 0;
+  }
+
+  .coin-icon {
+    font-size: 0.9rem;
+  }
+
+  .coin-count {
+    font-size: 0.9rem;
   }
 }
 
