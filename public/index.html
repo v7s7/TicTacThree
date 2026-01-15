@@ -24,11 +24,36 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-    <title>React App</title>
+    <title>TicTacThree</title>
+    <style>
+      /* Ensure dark background even if CSS fails to load */
+      body {
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%);
+        min-height: 100vh;
+        overflow: hidden;
+      }
+      #root {
+        min-height: 100vh;
+      }
+      /* Loading indicator */
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        color: white;
+        font-family: sans-serif;
+        font-size: 20px;
+      }
+    </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <div id="root">
+      <div class="loading">Loading...</div>
+    </div>
     <!--
       This HTML file is a template.
       If you open it directly in the browser, you will see an empty page.
