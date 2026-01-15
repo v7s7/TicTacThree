@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import Cell from './Cell';
 import { db } from '../firebase';
-import { doc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, runTransaction } from 'firebase/firestore';
 import { soundManager } from '../utils/soundManager';
 
 function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGameEnd, playerXName, playerOName, isBotThinking }) {
@@ -118,56 +118,64 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
     if (gameState.currentPlayer !== playerSymbol) return;
 
     const roomRef = doc(db, 'gameRooms', roomId);
-    const roomSnap = await getDoc(roomRef);
-    const data = roomSnap.data();
 
-    const updatedBoard = [...data.board];
-    updatedBoard[index] = playerSymbol;
+    await runTransaction(db, async (transaction) => {
+      const roomSnap = await transaction.get(roomRef);
+      if (!roomSnap.exists()) return;
 
-    let newPlayerXMarks = data.playerXMarks || [];
-    let newPlayerOMarks = data.playerOMarks || [];
+      const data = roomSnap.data();
+      if (!data || data.status !== 'playing') return;
+      if (data.currentPlayer !== playerSymbol) return;
+      if (data.board?.[index]) return;
 
-    if (playerSymbol === 'X') {
-      newPlayerXMarks.push(index);
-      if (newPlayerXMarks.length > 3) {
-        const removed = newPlayerXMarks.shift();
-        updatedBoard[removed] = null;
+      const updatedBoard = [...data.board];
+      updatedBoard[index] = playerSymbol;
+
+      let newPlayerXMarks = data.playerXMarks || [];
+      let newPlayerOMarks = data.playerOMarks || [];
+
+      if (playerSymbol === 'X') {
+        newPlayerXMarks = [...newPlayerXMarks, index];
+        if (newPlayerXMarks.length > 3) {
+          const removed = newPlayerXMarks.shift();
+          updatedBoard[removed] = null;
+        }
+      } else {
+        newPlayerOMarks = [...newPlayerOMarks, index];
+        if (newPlayerOMarks.length > 3) {
+          const removed = newPlayerOMarks.shift();
+          updatedBoard[removed] = null;
+        }
       }
-    } else {
-      newPlayerOMarks.push(index);
-      if (newPlayerOMarks.length > 3) {
-        const removed = newPlayerOMarks.shift();
-        updatedBoard[removed] = null;
+
+      const winPatterns = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+
+      let winner = null;
+      for (const [a,b,c] of winPatterns) {
+        if (updatedBoard[a] && updatedBoard[a] === updatedBoard[b] && updatedBoard[a] === updatedBoard[c]) {
+          winner = updatedBoard[a];
+          break;
+        }
       }
-    }
 
-    const winPatterns = [
-      [0,1,2],[3,4,5],[6,7,8],
-      [0,3,6],[1,4,7],[2,5,8],
-      [0,4,8],[2,4,6]
-    ];
+      const isDraw = updatedBoard.every(cell => cell !== null);
 
-    let winner = null;
-    for (const [a,b,c] of winPatterns) {
-      if (updatedBoard[a] && updatedBoard[a] === updatedBoard[b] && updatedBoard[a] === updatedBoard[c]) {
-        winner = updatedBoard[a];
-        break;
-      }
-    }
-
-    const isDraw = updatedBoard.every(cell => cell !== null);
-
-    await updateDoc(roomRef, {
-      board: updatedBoard,
-      playerXMarks: newPlayerXMarks,
-      playerOMarks: newPlayerOMarks,
-      markToRemoveIndex:
-        (playerSymbol === 'X' && newPlayerXMarks.length === 3) ? newPlayerXMarks[0] :
-        (playerSymbol === 'O' && newPlayerOMarks.length === 3) ? newPlayerOMarks[0] :
-        null,
-      currentPlayer: playerSymbol === 'X' ? 'O' : 'X',
-      status: winner || isDraw ? 'finished' : 'playing',
-      winner: winner || (isDraw ? 'draw' : null),
+      transaction.update(roomRef, {
+        board: updatedBoard,
+        playerXMarks: newPlayerXMarks,
+        playerOMarks: newPlayerOMarks,
+        markToRemoveIndex:
+          (playerSymbol === 'X' && newPlayerXMarks.length === 3) ? newPlayerXMarks[0] :
+          (playerSymbol === 'O' && newPlayerOMarks.length === 3) ? newPlayerOMarks[0] :
+          null,
+        currentPlayer: playerSymbol === 'X' ? 'O' : 'X',
+        status: winner || isDraw ? 'finished' : 'playing',
+        winner: winner || (isDraw ? 'draw' : null),
+      });
     });
   };
 

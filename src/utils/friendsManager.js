@@ -173,8 +173,9 @@ export const getFriendsList = async (userId) => {
   }
 };
 
-export const updateHeadToHeadForFriends = async (userId, friendId, outcomeForUser) => {
+export const updateHeadToHeadForFriends = async (userId, friendId, outcomeForUser, gameMode = 'online') => {
   try {
+    if (gameMode !== 'online') return { success: false, skipped: true };
     if (!userId || !friendId || userId === friendId) return { success: false, error: 'Invalid IDs' };
 
     const userRef = doc(db, 'users', userId);
@@ -211,12 +212,9 @@ export const updateHeadToHeadForFriends = async (userId, friendId, outcomeForUse
     applyOutcome(userRivalry, outcomeForUser);
     applyOutcome(friendRivalry, invertOutcome(outcomeForUser));
 
-    await Promise.all([
-      updateDoc(userRef, { [`rivalries.${friendId}`]: userRivalry }),
-      updateDoc(friendRef, { [`rivalries.${userId}`]: friendRivalry })
-    ]);
+    await updateDoc(userRef, { [`rivalries.${friendId}`]: userRivalry });
 
-    return { success: true, userRivalry, friendRivalry };
+    return { success: true, userRivalry };
   } catch (error) {
     console.error('Error updating head-to-head:', error);
     return { success: false, error: error.message };

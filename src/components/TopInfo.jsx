@@ -87,42 +87,42 @@ function TopInfo({
 
       {gameMode === 'online' ? (
         <>
-          <p className="score-row">
+          <div className="score-row">
             {renderAvatarChip(playerXName, playerXAvatar)}
             <span className="score-name">{playerXName || 'Player X'}:</span>
             <span className="score-value">{onlineXScore}</span>
-          </p>
-          <p className="score-row">
+          </div>
+          <div className="score-row">
             {renderAvatarChip(playerOName, playerOAvatar)}
             <span className="score-name">{playerOName || 'Player O'}:</span>
             <span className="score-value">{onlineOScore}</span>
-          </p>
+          </div>
         </>
       ) : gameMode === 'bot' ? (
         <>
-          <p className="score-row">
+          <div className="score-row">
             {renderAvatarChip('You', playerXAvatar)}
             <span className="score-name">You (X):</span>
             <span className="score-value">{localXScore}</span>
-          </p>
-          <p className="score-row">
+          </div>
+          <div className="score-row">
             {renderAvatarChip('Bot', playerOAvatar)}
             <span className="score-name">Bot (O):</span>
             <span className="score-value">{localOScore}</span>
-          </p>
+          </div>
         </>
       ) : (
         <>
-          <p className="score-row">
+          <div className="score-row">
             {renderAvatarChip(playerXName, playerXAvatar)}
             <span className="score-name">{playerXName || 'Player X'}:</span>
             <span className="score-value">{localXScore}</span>
-          </p>
-          <p className="score-row">
+          </div>
+          <div className="score-row">
             {renderAvatarChip(playerOName, playerOAvatar)}
             <span className="score-name">{playerOName || 'Player O'}:</span>
             <span className="score-value">{localOScore}</span>
-          </p>
+          </div>
         </>
       )}
 

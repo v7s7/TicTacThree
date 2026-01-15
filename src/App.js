@@ -492,7 +492,7 @@ function App() {
       }
 
       setProcessedResultId(resultKey);
-      await updateHeadToHeadForFriends(userId, opponent, outcome);
+      await updateHeadToHeadForFriends(userId, opponent, outcome, gameMode);
     };
 
     processRivalry();
