@@ -97,6 +97,110 @@ export const getAllAvatarFrames = () => {
   return [...SHOP_ITEMS.avatarFrames, ...customUploadedAvatars];
 };
 
+const isGradient = (value) => typeof value === 'string' && value.includes('gradient');
+
+const getFallbackFrame = () => SHOP_ITEMS.avatarFrames.find((f) => f.id === 'frame_basic') || SHOP_ITEMS.avatarFrames[0];
+const getFallbackBackground = () => SHOP_ITEMS.avatarBackgrounds.find((b) => b.id === 'bg_none') || SHOP_ITEMS.avatarBackgrounds[0];
+
+export const getAvatarFrameById = (frameId) => {
+  if (!frameId) return null;
+  return getAllAvatarFrames().find((f) => f.id === frameId) || null;
+};
+
+export const getAvatarBackgroundById = (backgroundId) => {
+  if (!backgroundId) return null;
+  return SHOP_ITEMS.avatarBackgrounds.find((b) => b.id === backgroundId) || null;
+};
+
+/**
+ * Resolve equipped avatar ids to concrete render info (colors/images) so UI stays consistent.
+ * Supports custom uploaded frames (with imageUrl).
+ */
+export const getAvatarRenderInfo = (avatar = {}, options = {}) => {
+  const borderWidth = Number.isFinite(options.borderWidth) ? options.borderWidth : 3;
+  const contentScale = typeof options.contentScale === 'number' ? options.contentScale : 0.72;
+
+  const resolvedFrame = getAvatarFrameById(avatar.frame) || getFallbackFrame();
+  const resolvedBackground = getAvatarBackgroundById(avatar.background) || getFallbackBackground();
+
+  const frameColor = resolvedFrame?.color || '#667eea';
+  const frameIsGradient = isGradient(frameColor);
+  const bgColor = resolvedBackground?.color;
+  const bgIsGradient = isGradient(bgColor);
+  const bgHasImage = !!resolvedBackground?.imageUrl;
+
+  const bgLayer = bgHasImage
+    ? `url(${resolvedBackground.imageUrl})`
+    : bgIsGradient
+    ? bgColor
+    : bgColor
+    ? `linear-gradient(${bgColor}, ${bgColor})`
+    : 'linear-gradient(rgba(26, 26, 46, 0.6), rgba(26, 26, 46, 0.6))';
+
+  const style = {
+    backgroundColor: !bgHasImage && !bgIsGradient && !frameIsGradient ? (bgColor || 'rgba(26, 26, 46, 0.6)') : undefined,
+    backgroundImage: undefined,
+    backgroundSize: undefined,
+    backgroundPosition: undefined,
+    backgroundRepeat: undefined,
+    border: frameIsGradient ? `${borderWidth}px solid transparent` : `${borderWidth}px solid ${frameColor}`,
+    backgroundOrigin: undefined,
+    backgroundClip: undefined,
+    position: 'relative',
+    overflow: 'visible'
+  };
+
+  if (frameIsGradient) {
+    // Two-layer background: actual background in padding-box + gradient frame in border-box
+    style.backgroundImage = `${bgLayer}, ${frameColor}`;
+    style.backgroundOrigin = 'border-box';
+    style.backgroundClip = 'padding-box, border-box';
+    style.backgroundSize = bgHasImage ? 'cover, cover' : undefined;
+    style.backgroundPosition = bgHasImage ? 'center, center' : undefined;
+    style.backgroundRepeat = bgHasImage ? 'no-repeat, no-repeat' : undefined;
+  } else if (bgHasImage || bgIsGradient) {
+    style.backgroundImage = bgLayer;
+    style.backgroundSize = bgHasImage ? 'cover' : undefined;
+    style.backgroundPosition = bgHasImage ? 'center' : undefined;
+    style.backgroundRepeat = bgHasImage ? 'no-repeat' : undefined;
+  }
+
+  const ringUrl = resolvedFrame?.imageUrl || null;
+  const ringScale = Number.isFinite(resolvedFrame?.ringScale) ? resolvedFrame.ringScale : 1.35;
+  const ringOffsetX = Number.isFinite(resolvedFrame?.ringOffsetX) ? resolvedFrame.ringOffsetX : 0;
+  const ringOffsetY = Number.isFinite(resolvedFrame?.ringOffsetY) ? resolvedFrame.ringOffsetY : 0;
+
+  const ringStyle = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: '100%',
+    height: '100%',
+    transform: `translate(-50%, -50%) translate(${ringOffsetX}px, ${ringOffsetY}px) scale(${ringScale})`,
+    objectFit: 'contain',
+    pointerEvents: 'none',
+    userSelect: 'none',
+    zIndex: 2
+  };
+
+  const contentStyle = {
+    width: `${Math.round(contentScale * 100)}%`,
+    height: `${Math.round(contentScale * 100)}%`,
+    borderRadius: '50%',
+    position: 'relative',
+    zIndex: 1
+  };
+
+  return {
+    frame: resolvedFrame,
+    background: resolvedBackground,
+    style,
+    ringUrl,
+    ringStyle,
+    contentStyle
+  };
+};
+
 /**
  * Add a new custom avatar (admin only)
  * @param {Object} avatar - Avatar object with id, name, price, imageUrl, etc.
@@ -113,6 +217,9 @@ export const addCustomAvatar = async (avatar, db) => {
     color: avatar.color || '#667eea',
     description: avatar.description || '',
     imageUrl: avatar.imageUrl, // This is the uploaded image URL
+    ringScale: Number.isFinite(avatar.ringScale) ? avatar.ringScale : 1.35,
+    ringOffsetX: Number.isFinite(avatar.ringOffsetX) ? avatar.ringOffsetX : 0,
+    ringOffsetY: Number.isFinite(avatar.ringOffsetY) ? avatar.ringOffsetY : 0,
     image: 'custom',
     custom: true,
     createdAt: Date.now()

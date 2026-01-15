@@ -1,40 +1,27 @@
 import React from 'react';
 import { DIFFICULTY_INFO } from '../utils/botAI';
-
-const frameColors = {
-  frame_basic: '#667eea',
-  frame_gold: '#ffd700',
-  frame_rainbow: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
-  frame_fire: '#ff4500',
-  frame_ice: '#00f5ff',
-  frame_diamond: '#b9f2ff'
-};
-
-const backgroundColors = {
-  bg_none: 'rgba(26, 26, 46, 0.6)',
-  bg_purple: '#667eea',
-  bg_green: '#00e676',
-  bg_red: '#ff4b5c',
-  bg_galaxy: '#1a1a2e'
-};
+import { getAvatarRenderInfo } from '../utils/shopManager';
 
 const renderAvatarChip = (name = 'P', avatar) => {
   const letter = name.charAt(0).toUpperCase();
-  const frame = avatar?.frame && frameColors[avatar.frame] ? frameColors[avatar.frame] : '#667eea';
-  const background = avatar?.background && backgroundColors[avatar.background]
-    ? backgroundColors[avatar.background]
-    : 'rgba(26, 26, 46, 0.6)';
+  const avatarRender = getAvatarRenderInfo(avatar, { borderWidth: 3, contentScale: 0.72 });
 
   return (
     <div
       className="avatar-chip"
-      style={{
-        background,
-        border: avatar?.frame === 'frame_rainbow' ? '3px solid transparent' : `3px solid ${frame}`,
-        backgroundImage: avatar?.frame === 'frame_rainbow' ? frame : undefined
-      }}
+      style={avatarRender.style}
     >
-      <span className="avatar-chip-letter">{letter}</span>
+      <span className="avatar-chip-letter" style={{ position: 'relative', zIndex: 1 }}>
+        {letter}
+      </span>
+      {avatarRender.ringUrl && (
+        <img
+          src={avatarRender.ringUrl}
+          alt="Avatar Ring"
+          style={avatarRender.ringStyle}
+          draggable={false}
+        />
+      )}
     </div>
   );
 };

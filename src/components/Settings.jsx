@@ -4,7 +4,8 @@ import {
   getTimeUntilNameChange,
   formatTimeRemaining,
   isDisplayNameUnique,
-  getAvatarLetter
+  getAvatarLetter,
+  getAvatarRenderInfo
 } from '../utils/shopManager';
 import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -72,6 +73,8 @@ function Settings({ soundEnabled, onToggleSound, onResetData, onClose, user, onS
     setChangingName(false);
   };
 
+  const avatarRender = getAvatarRenderInfo(userAvatar, { borderWidth: 4, contentScale: 0.72 });
+
   return (
     <div className="modal">
       <div className="modal-content settings-modal">
@@ -85,12 +88,19 @@ function Settings({ soundEnabled, onToggleSound, onResetData, onClose, user, onS
               <div className="profile-preview">
                 <div
                   className="avatar-preview-large"
-                  style={{
-                    background: userAvatar?.background ? getBackgroundColor(userAvatar.background) : 'rgba(26, 26, 46, 0.6)',
-                    border: userAvatar?.frame ? `4px solid ${getFrameColor(userAvatar.frame)}` : '4px solid #667eea'
-                  }}
+                  style={avatarRender.style}
                 >
-                  <span className="avatar-letter">{getAvatarLetter(user.displayName || user.email)}</span>
+                  <span className="avatar-letter" style={{ position: 'relative', zIndex: 1 }}>
+                    {getAvatarLetter(user.displayName || user.email)}
+                  </span>
+                  {avatarRender.ringUrl && (
+                    <img
+                      src={avatarRender.ringUrl}
+                      alt="Avatar Ring"
+                      style={avatarRender.ringStyle}
+                      draggable={false}
+                    />
+                  )}
                 </div>
                 <div className="profile-info">
                   <div className="profile-name">{user.displayName || user.email}</div>
@@ -199,32 +209,6 @@ function Settings({ soundEnabled, onToggleSound, onResetData, onClose, user, onS
       </div>
     </div>
   );
-}
-
-// Helper functions
-function getBackgroundColor(bgId) {
-  const backgrounds = {
-    'bg_none': 'transparent',
-    'bg_purple': 'rgba(102, 126, 234, 0.3)',
-    'bg_green': 'rgba(0, 230, 118, 0.3)',
-    'bg_red': 'rgba(255, 75, 92, 0.3)',
-    'bg_galaxy': 'linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)'
-  };
-  return backgrounds[bgId] || 'rgba(26, 26, 46, 0.6)';
-}
-
-function getFrameColor(frameId) {
-  const frames = {
-    'frame_basic': '#667eea',
-    'frame_clean': '#e0e0e0',
-    'frame_minimal': '#9e9e9e',
-    'frame_gold': '#ffd700',
-    'frame_rainbow': 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
-    'frame_fire': '#ff4500',
-    'frame_ice': '#00f5ff',
-    'frame_diamond': '#b9f2ff'
-  };
-  return frames[frameId] || '#667eea';
 }
 
 export default Settings;

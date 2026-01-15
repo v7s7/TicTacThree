@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { getAllAvatarFrames, SHOP_ITEMS, isRankLocked } from '../utils/shopManager';
+import { getAllAvatarFrames, SHOP_ITEMS, isRankLocked, getAvatarRenderInfo } from '../utils/shopManager';
 import { soundManager } from '../utils/soundManager';
 
 const rankOrder = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master', 'Grandmaster'];
@@ -57,6 +57,22 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
       });
     } else {
       onPurchase(item, true);
+    }
+  };
+
+  const handleUnequip = (item) => {
+    soundManager.playClick();
+    if (onEquip) {
+      // Unequip by reverting to default
+      const defaults = {
+        frame: 'frame_basic',
+        background: 'bg_none'
+      };
+
+      onEquip({
+        frame: item.type === 'frame' ? defaults.frame : equippedItems.frame,
+        background: item.type === 'background' ? defaults.background : equippedItems.background
+      });
     }
   };
 
@@ -162,25 +178,27 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
                     const owned = isOwned(item.id);
                     const locked = lockReason(item);
                     const animClass = getAnimationClass(item);
+
+                    const previewAvatar = selectedTab === 'frames'
+                      ? { frame: item.id, background: 'bg_none' }
+                      : { frame: 'frame_basic', background: item.id };
+                    const previewRender = getAvatarRenderInfo(previewAvatar, { borderWidth: 3, contentScale: 0.72 });
                     
                     return (
                       <div key={item.id} className={`shop-item ${locked ? 'item-locked' : ''} ${animClass}`}>
                         <div
                           className={`shop-item-preview ${animClass}`}
-                          style={{
-                            background: selectedTab === 'backgrounds' ? item.color : 'rgba(26, 26, 46, 0.6)',
-                            border: selectedTab === 'frames' ? `3px solid ${item.color}` : 'none'
-                          }}
+                          style={previewRender.style}
                         >
-                          {item.imageUrl ? (
-                            <img 
-                              src={item.imageUrl} 
-                              alt={item.name}
+                          <div className="shop-item-letter" style={{ position: 'relative', zIndex: 1 }}>A</div>
+                          {previewRender.ringUrl && (
+                            <img
+                              src={previewRender.ringUrl}
+                              alt={`${item.name} Ring`}
                               className="shop-item-custom-img"
-                              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                              style={previewRender.ringStyle}
+                              draggable={false}
                             />
-                          ) : (
-                            <div className="shop-item-letter">A</div>
                           )}
                           {item.custom && <div className="item-badge glow">Custom</div>}
                           {locked && <div className="item-badge lock">🔒 {locked}</div>}
@@ -197,9 +215,21 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
                           <div className="shop-item-actions">
                             {owned ? (
                               isEquipped(item.id) ? (
-                                <button className="shop-btn equipped" disabled>
-                                  Equipped
-                                </button>
+                                <>
+                                  <button className="shop-btn equipped" disabled>
+                                    ✓ Equipped
+                                  </button>
+                                  {/* Allow unequipping non-default items */}
+                                  {item.id !== 'frame_basic' && item.id !== 'bg_none' && (
+                                    <button
+                                      className="shop-btn unequip"
+                                      onClick={() => handleUnequip(item)}
+                                      style={{ marginTop: '8px' }}
+                                    >
+                                      Unequip
+                                    </button>
+                                  )}
+                                </>
                               ) : (
                                 <button className="shop-btn equip" onClick={() => handleEquip(item)}>
                                   Equip
