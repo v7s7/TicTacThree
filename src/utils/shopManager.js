@@ -240,8 +240,11 @@ export const getAvatarRenderInfo = (avatar = {}, options = {}) => {
   const borderWidth = Number.isFinite(options.borderWidth) ? options.borderWidth : 3;
   const contentScale = typeof options.contentScale === 'number' ? options.contentScale : 0.72;
 
-  const resolvedFrame = getAvatarFrameById(avatar.frame) || getFallbackFrame();
-  const resolvedBackground = getAvatarBackgroundById(avatar.background) || getFallbackBackground();
+  // Ensure avatar is an object
+  const safeAvatar = avatar || {};
+  
+  const resolvedFrame = getAvatarFrameById(safeAvatar.frame) || getFallbackFrame();
+  const resolvedBackground = getAvatarBackgroundById(safeAvatar.background) || getFallbackBackground();
 
   const frameColor = resolvedFrame?.color ?? null;
   const frameIsGradient = frameColor ? isGradient(frameColor) : false;
