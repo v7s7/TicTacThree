@@ -74,6 +74,126 @@ export const SHOP_ITEMS = {
       color: '#ff4b5c',
       description: 'Red gradient glow',
       image: 'red'
+    },
+    {
+      id: 'bg_blue',
+      name: 'Ocean Blue',
+      type: 'background',
+      tier: 'basic',
+      price: 75,
+      color: '#2196f3',
+      description: 'Deep ocean blue',
+      image: 'blue'
+    },
+    {
+      id: 'bg_orange',
+      name: 'Sunset Orange',
+      type: 'background',
+      tier: 'basic',
+      price: 75,
+      color: '#ff9800',
+      description: 'Warm sunset glow',
+      image: 'orange'
+    },
+    {
+      id: 'bg_pink',
+      name: 'Rose Pink',
+      type: 'background',
+      tier: 'basic',
+      price: 100,
+      color: '#e91e63',
+      description: 'Soft rose pink',
+      image: 'pink'
+    },
+    {
+      id: 'bg_cyan',
+      name: 'Electric Cyan',
+      type: 'background',
+      tier: 'rare',
+      price: 100,
+      color: '#00bcd4',
+      description: 'Bright electric cyan',
+      image: 'cyan'
+    },
+    {
+      id: 'bg_yellow',
+      name: 'Golden Sun',
+      type: 'background',
+      tier: 'rare',
+      price: 125,
+      color: '#ffc107',
+      description: 'Radiant golden glow',
+      image: 'yellow'
+    },
+    {
+      id: 'bg_indigo',
+      name: 'Deep Indigo',
+      type: 'background',
+      tier: 'rare',
+      price: 125,
+      color: '#3f51b5',
+      description: 'Royal indigo shade',
+      image: 'indigo'
+    },
+    {
+      id: 'bg_teal',
+      name: 'Mystic Teal',
+      type: 'background',
+      tier: 'rare',
+      price: 150,
+      color: '#009688',
+      description: 'Mysterious teal glow',
+      image: 'teal'
+    },
+    {
+      id: 'bg_lime',
+      name: 'Neon Lime',
+      type: 'background',
+      tier: 'rare',
+      price: 150,
+      color: '#cddc39',
+      description: 'Vibrant neon lime',
+      image: 'lime'
+    },
+    {
+      id: 'bg_violet',
+      name: 'Royal Violet',
+      type: 'background',
+      tier: 'epic',
+      price: 175,
+      color: '#9c27b0',
+      description: 'Majestic violet aura',
+      image: 'violet'
+    },
+    {
+      id: 'bg_crimson',
+      name: 'Crimson Flame',
+      type: 'background',
+      tier: 'epic',
+      price: 175,
+      color: '#d32f2f',
+      description: 'Intense crimson fire',
+      image: 'crimson'
+    },
+    {
+      id: 'bg_gold',
+      name: 'Pure Gold',
+      type: 'background',
+      tier: 'epic',
+      price: 200,
+      color: '#ffd700',
+      description: 'Luxurious gold shine',
+      image: 'gold'
+    },
+    {
+      id: 'bg_silver',
+      name: 'Silver Frost',
+      type: 'background',
+      tier: 'epic',
+      price: 200,
+      color: '#c0c0c0',
+      description: 'Elegant silver frost',
+      image: 'silver'
     }
   ]
 };
