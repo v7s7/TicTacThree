@@ -1888,8 +1888,7 @@ body {
   align-items: center;
   justify-content: center;
   position: relative;
-  background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0)), rgba(26, 26, 46, 0.9);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.1);
+  overflow: visible;
   z-index: 1;
   transition: transform 0.2s ease;
 }
@@ -1899,19 +1898,7 @@ body {
 }
 
 .shop-item-preview::after {
-  content: '';
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  border: 3px solid rgba(102, 126, 234, 0.4);
-  opacity: 0.9;
-  transition: all 0.2s ease;
-}
-
-.shop-item:hover .shop-item-preview::after {
-  inset: -10px;
-  border-width: 4px;
-  border-color: rgba(102, 126, 234, 0.6);
+  display: none;
 }
 
 .shop-item-letter {
