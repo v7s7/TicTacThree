@@ -304,6 +304,7 @@ function App() {
   const [joinRoomId, setJoinRoomId] = useState('');
   const [playerSymbol, setPlayerSymbol] = useState(null);
   const [opponentId, setOpponentId] = useState(null);
+  const [opponentAvatar, setOpponentAvatar] = useState(null);
   const [roomId, setRoomId] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [opponentLeft, setOpponentLeft] = useState(false);
@@ -507,6 +508,32 @@ function App() {
     return () => unsub();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, playerSymbol, opponentId]);
+
+  // Fetch opponent's avatar for online games
+  useEffect(() => {
+    if (!opponentId || gameMode !== 'online') {
+      setOpponentAvatar(null);
+      return;
+    }
+
+    const fetchOpponentAvatar = async () => {
+      try {
+        const opponentDoc = await getDoc(doc(db, 'users', opponentId));
+        if (opponentDoc.exists()) {
+          const data = opponentDoc.data();
+          setOpponentAvatar({
+            frame: data.equippedFrame || 'frame_basic',
+            background: data.equippedBackground || 'bg_none'
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch opponent avatar:', error);
+        setOpponentAvatar({ frame: 'frame_basic', background: 'bg_none' });
+      }
+    };
+
+    fetchOpponentAvatar();
+  }, [opponentId, gameMode]);
 
   // Bot move handler
   useEffect(() => {
@@ -753,6 +780,8 @@ function App() {
       setBotDifficulty(difficulty);
       setGameMode('bot');
       resetBoardFull();
+      setLocalXScore(0);
+      setLocalOScore(0);
     } else if (mode === 'local') {
       setGameMode('local');
       resetBoardFull();
@@ -1204,8 +1233,12 @@ function App() {
               botDifficulty={botDifficulty}
               playerXName={playerXName}
               playerOName={playerOName}
-              playerXAvatar={playerSymbol === 'X' ? userAvatar : null}
-              playerOAvatar={playerSymbol === 'O' ? userAvatar : null}
+              playerXAvatar={gameMode === 'online' 
+                ? (playerSymbol === 'X' ? userAvatar : (opponentAvatar || { frame: 'frame_basic', background: 'bg_none' }))
+                : userAvatar}
+              playerOAvatar={gameMode === 'online' 
+                ? (playerSymbol === 'O' ? userAvatar : (opponentAvatar || { frame: 'frame_basic', background: 'bg_none' }))
+                : (gameMode === 'bot' ? { frame: 'frame_basic', background: 'bg_none' } : userAvatar)}
             />
 
             <Board
