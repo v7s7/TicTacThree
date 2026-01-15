@@ -66,15 +66,37 @@ service cloud.firestore {
 
     // Friend requests collection
     match /friendRequests/{requestId} {
-      // Users can read their own friend requests
+      // Users can read requests where they are sender or receiver
       allow read: if isAuthenticated() &&
                      (resource.data.from == request.auth.uid ||
                       resource.data.to == request.auth.uid);
+      
+      // Allow listing friend requests for authenticated users
+      allow list: if isAuthenticated();
 
       // Users can create friend requests
       allow create: if isAuthenticated() && request.resource.data.from == request.auth.uid;
 
       // Users can update/delete requests they're involved in
+      allow update, delete: if isAuthenticated() &&
+                               (resource.data.from == request.auth.uid ||
+                                resource.data.to == request.auth.uid);
+    }
+
+    // Game invites collection
+    match /gameInvites/{inviteId} {
+      // Users can read invites where they are sender or receiver
+      allow read: if isAuthenticated() &&
+                     (resource.data.from == request.auth.uid ||
+                      resource.data.to == request.auth.uid);
+      
+      // Allow listing game invites for authenticated users
+      allow list: if isAuthenticated();
+
+      // Users can create game invites
+      allow create: if isAuthenticated() && request.resource.data.from == request.auth.uid;
+
+      // Users can update/delete invites they're involved in
       allow update, delete: if isAuthenticated() &&
                                (resource.data.from == request.auth.uid ||
                                 resource.data.to == request.auth.uid);

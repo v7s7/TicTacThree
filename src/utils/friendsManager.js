@@ -27,16 +27,21 @@ const invertOutcome = (outcome) => {
 // Send friend request
 export const sendFriendRequest = async (fromUserId, toDisplayName, fromDisplayName, fromAvatar = {}) => {
   try {
-    // Find user by display name
+    // Find user by display name (case-insensitive)
     const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('displayName', '==', toDisplayName));
-    const snapshot = await getDocs(q);
-
-    if (snapshot.empty) {
+    const allUsersSnapshot = await getDocs(usersRef);
+    
+    // Filter by case-insensitive username match
+    const matchingUsers = allUsersSnapshot.docs.filter(doc => {
+      const userData = doc.data();
+      return userData.displayName && userData.displayName.toLowerCase() === toDisplayName.toLowerCase();
+    });
+    
+    if (matchingUsers.length === 0) {
       return { success: false, error: 'User not found' };
     }
 
-    const toUser = snapshot.docs[0];
+    const toUser = matchingUsers[0];
     const toUserId = toUser.id;
 
     if (toUserId === fromUserId) {
@@ -52,7 +57,7 @@ export const sendFriendRequest = async (fromUserId, toDisplayName, fromDisplayNa
 
     // Create friend request
     const requestId = nanoid(12);
-    await setDoc(doc(db, 'friend_requests', requestId), {
+    await setDoc(doc(db, 'friendRequests', requestId), {
       from: fromUserId,
       to: toUserId,
       fromDisplayName: fromDisplayName,
@@ -73,7 +78,7 @@ export const sendFriendRequest = async (fromUserId, toDisplayName, fromDisplayNa
 // Accept friend request
 export const acceptFriendRequest = async (requestId, userId) => {
   try {
-    const requestDoc = await getDoc(doc(db, 'friend_requests', requestId));
+    const requestDoc = await getDoc(doc(db, 'friendRequests', requestId));
     if (!requestDoc.exists()) {
       return { success: false, error: 'Request not found' };
     }
@@ -90,7 +95,7 @@ export const acceptFriendRequest = async (requestId, userId) => {
     });
 
     // Delete request
-    await deleteDoc(doc(db, 'friend_requests', requestId));
+    await deleteDoc(doc(db, 'friendRequests', requestId));
 
     return { success: true, message: 'Friend added!' };
   } catch (error) {
@@ -102,7 +107,7 @@ export const acceptFriendRequest = async (requestId, userId) => {
 // Decline friend request
 export const declineFriendRequest = async (requestId) => {
   try {
-    await deleteDoc(doc(db, 'friend_requests', requestId));
+    await deleteDoc(doc(db, 'friendRequests', requestId));
     return { success: true };
   } catch (error) {
     console.error('Error declining friend request:', error);
@@ -114,7 +119,7 @@ export const declineFriendRequest = async (requestId) => {
 export const getFriendRequests = async (userId) => {
   try {
     const q = query(
-      collection(db, 'friend_requests'),
+      collection(db, 'friendRequests'),
       where('to', '==', userId),
       where('status', '==', 'pending')
     );
@@ -220,7 +225,7 @@ export const updateHeadToHeadForFriends = async (userId, friendId, outcomeForUse
 export const listenFriendRequests = (userId, callback) => {
   if (!userId) return () => {};
   const q = query(
-    collection(db, 'friend_requests'),
+    collection(db, 'friendRequests'),
     where('to', '==', userId),
     where('status', '==', 'pending')
   );
@@ -233,7 +238,7 @@ export const listenFriendRequests = (userId, callback) => {
 export const listenGameInvites = (userId, callback) => {
   if (!userId) return () => {};
   const q = query(
-    collection(db, 'game_invites'),
+    collection(db, 'gameInvites'),
     where('to', '==', userId),
     where('status', '==', 'pending')
   );
@@ -284,7 +289,7 @@ export const inviteFriendToGame = async (fromUserId, toUserId, fromDisplayName, 
     });
 
     // Create notification for friend
-    await setDoc(doc(db, 'game_invites', nanoid(12)), {
+    await setDoc(doc(db, 'gameInvites', nanoid(12)), {
       roomId,
       from: fromUserId,
       to: toUserId,
@@ -307,7 +312,7 @@ export const inviteFriendToGame = async (fromUserId, toUserId, fromDisplayName, 
 export const getGameInvites = async (userId) => {
   try {
     const q = query(
-      collection(db, 'game_invites'),
+      collection(db, 'gameInvites'),
       where('to', '==', userId),
       where('status', '==', 'pending')
     );
@@ -328,7 +333,7 @@ export const getGameInvites = async (userId) => {
 // Accept game invite
 export const acceptGameInvite = async (inviteId) => {
   try {
-    const inviteDoc = await getDoc(doc(db, 'game_invites', inviteId));
+    const inviteDoc = await getDoc(doc(db, 'gameInvites', inviteId));
     if (!inviteDoc.exists()) {
       return { success: false, error: 'Invite not found' };
     }
@@ -341,7 +346,7 @@ export const acceptGameInvite = async (inviteId) => {
     });
 
     // Delete invite
-    await deleteDoc(doc(db, 'game_invites', inviteId));
+    await deleteDoc(doc(db, 'gameInvites', inviteId));
 
     return { success: true, roomId: invite.roomId };
   } catch (error) {
@@ -355,7 +360,7 @@ export const declineGameInvite = async (inviteId, roomId) => {
   try {
     // Delete room and invite
     await deleteDoc(doc(db, 'rooms', roomId));
-    await deleteDoc(doc(db, 'game_invites', inviteId));
+    await deleteDoc(doc(db, 'gameInvites', inviteId));
     return { success: true };
   } catch (error) {
     console.error('Error declining game invite:', error);

@@ -292,31 +292,27 @@ function FriendsList({ onClose, user, onJoinGame, userAvatar }) {
         <div className="friends-section">
           <div className="section-title-row">
             <h3>Your Friends ({friends.length})</h3>
-            <span className="section-chip muted">Head-to-head</span>
           </div>
           {friends.length === 0 ? (
             <p className="no-friends">No friends yet. Add some above!</p>
           ) : (
-            <div className="friends-list">
+            <div className="friends-list compact">
               {friends.map((friend) => (
-                <div key={friend.id} className="friend-card">
+                <div key={friend.id} className="friend-item-compact">
                   {renderAvatar(friend.displayName, friend.photoURL || friend.avatarUrl, {
                     frame: friend.equippedFrame,
                     background: friend.equippedBackground
                   })}
-                  <div className="friend-meta">
-                    <div className="friend-name-row">
-                      <span className="friend-name">{friend.displayName}</span>
-                      <span className="friend-tag">W-L-D {friend.rivalry?.wins || 0}-{friend.rivalry?.losses || 0}-{friend.rivalry?.draws || 0}</span>
-                    </div>
-                    <span className="friend-info">Tap invite to start a match</span>
+                  <div className="friend-info-compact">
+                    <span className="friend-name-compact">{friend.displayName}</span>
+                    <span className="friend-record">W-L-D {friend.rivalry?.wins || 0}-{friend.rivalry?.losses || 0}-{friend.rivalry?.draws || 0}</span>
                   </div>
-                  <div className="friend-actions">
-                    <button className="friend-btn pill primary" onClick={() => handleInvite(friend)}>
-                      Invite
+                  <div className="friend-actions-compact">
+                    <button className="friend-btn-icon primary" onClick={() => handleInvite(friend)} title="Invite to game">
+                      🎮
                     </button>
-                    <button className="friend-btn pill ghost" onClick={() => handleRemoveFriend(friend.id)}>
-                      Remove
+                    <button className="friend-btn-icon danger" onClick={() => handleRemoveFriend(friend.id)} title="Remove friend">
+                      ✕
                     </button>
                   </div>
                 </div>

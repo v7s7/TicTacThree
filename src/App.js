@@ -626,10 +626,18 @@ function App() {
       markToRemoveIndex: newPlayerOMarks.length === 3 ? newPlayerOMarks[0] : null,
       currentPlayer: 'X',
       gameActive: !winner && !isDraw,
-      showWinModal: winner || isDraw,
+      showWinModal: false, // Don't show immediately
       winMessage: winner ? 'Bot wins!' : isDraw ? "It's a draw!" : '',
-      winningLine: winningLine
+      winningLine: winningLine,
+      lastWinner: winner || (isDraw ? 'draw' : null)
     }));
+
+    // Delay showing modal to let winning line animation play
+    if (winner || isDraw) {
+      setTimeout(() => {
+        setGameState(prev => ({ ...prev, showWinModal: true }));
+      }, 1200);
+    }
   };
 
   const leaveGameCleanup = async () => {

@@ -62,18 +62,36 @@ export const dailyCooldownMs = (lastClaim) => {
   return Math.max(0, oneDay - (Date.now() - lastClaim));
 };
 
-const randomCoinReward = () => 50 + Math.floor(Math.random() * 101); // 50-150
+const randomCoinReward = () => 20 + Math.floor(Math.random() * 81); // 20-100
 
 export const rollMysteryReward = (ownedIds = []) => {
   // Exclude ranked-gated cosmetics from mystery boxes
   const items = getAllShopItems().filter((item) => !item.rankRequired);
   const unowned = items.filter((item) => !ownedIds.includes(item.id));
 
-  if (unowned.length > 0 && Math.random() < 0.7) {
-    const choice = unowned[Math.floor(Math.random() * unowned.length)];
-    return { type: 'cosmetic', item: choice };
+  if (unowned.length > 0) {
+    const roll = Math.random();
+    
+    // 5% chance for avatar frames
+    if (roll < 0.05) {
+      const avatarFrames = unowned.filter(item => item.type === 'frame');
+      if (avatarFrames.length > 0) {
+        const choice = avatarFrames[Math.floor(Math.random() * avatarFrames.length)];
+        return { type: 'cosmetic', item: choice };
+      }
+    }
+    
+    // 30% chance for backgrounds (5% + 30% = 35%)
+    if (roll < 0.35) {
+      const backgrounds = unowned.filter(item => item.type === 'background');
+      if (backgrounds.length > 0) {
+        const choice = backgrounds[Math.floor(Math.random() * backgrounds.length)];
+        return { type: 'cosmetic', item: choice };
+      }
+    }
   }
 
+  // 65% chance for coins (or if no cosmetics available)
   return { type: 'coins', coins: randomCoinReward() };
 };
 
