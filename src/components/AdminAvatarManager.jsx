@@ -26,7 +26,8 @@ function AdminAvatarManager({ user, onClose }) {
     name: '',
     description: '',
     price: 0,
-    color: '#667eea',
+    color: null,
+    useBorder: false,
     imageFile: null,
     ringScale: 1.35,
     ringOffsetX: 0,
@@ -140,7 +141,7 @@ function AdminAvatarManager({ user, onClose }) {
         name: newAvatar.name,
         description: newAvatar.description,
         price: parseInt(newAvatar.price) || 0,
-        color: newAvatar.color,
+        color: newAvatar.useBorder ? (newAvatar.color || '#667eea') : null,
         imageUrl: imageUrl,
         ringScale: Number(newAvatar.ringScale),
         ringOffsetX: Number(newAvatar.ringOffsetX),
@@ -155,7 +156,8 @@ function AdminAvatarManager({ user, onClose }) {
         name: '',
         description: '',
         price: 0,
-        color: '#667eea',
+        color: null,
+        useBorder: false,
         imageFile: null,
         ringScale: 1.35,
         ringOffsetX: 0,
@@ -177,7 +179,8 @@ function AdminAvatarManager({ user, onClose }) {
       name: avatar.name,
       description: avatar.description,
       price: avatar.price,
-      color: avatar.color,
+      color: avatar.color || null,
+      useBorder: !!avatar.color,
       ringScale: Number.isFinite(avatar.ringScale) ? avatar.ringScale : 1.35,
       ringOffsetX: Number.isFinite(avatar.ringOffsetX) ? avatar.ringOffsetX : 0,
       ringOffsetY: Number.isFinite(avatar.ringOffsetY) ? avatar.ringOffsetY : 0
@@ -266,19 +269,30 @@ function AdminAvatarManager({ user, onClose }) {
                 <input
                   type="number"
                   value={newAvatar.price}
-                  onChange={(e) => setNewAvatar({ ...newAvatar, price: e.target.value })}
+                  onChange={(e) => setNewAvatar({ ...newAvatar, price: parseInt(e.target.value) || 0 })}
                   min="0"
                   required
                 />
               </div>
 
               <div className="form-group">
-                <label>Border Color</label>
-                <input
-                  type="color"
-                  value={newAvatar.color}
-                  onChange={(e) => setNewAvatar({ ...newAvatar, color: e.target.value })}
-                />
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={newAvatar.useBorder}
+                    onChange={(e) => setNewAvatar({ ...newAvatar, useBorder: e.target.checked, color: e.target.checked ? (newAvatar.color || '#667eea') : null })}
+                    style={{ marginRight: 8 }}
+                  />
+                  Enable Border Color
+                </label>
+                {newAvatar.useBorder && (
+                  <input
+                    type="color"
+                    value={newAvatar.color || '#667eea'}
+                    onChange={(e) => setNewAvatar({ ...newAvatar, color: e.target.value })}
+                    style={{ marginTop: 8 }}
+                  />
+                )}
               </div>
             </div>
 
@@ -308,7 +322,7 @@ function AdminAvatarManager({ user, onClose }) {
                         height: 110,
                         borderRadius: '50%',
                         background: 'rgba(26, 26, 46, 0.6)',
-                        border: `3px solid ${newAvatar.color}`,
+                        border: newAvatar.useBorder ? `3px solid ${newAvatar.color || '#667eea'}` : 'none',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -410,7 +424,7 @@ function AdminAvatarManager({ user, onClose }) {
                               height: 64,
                               borderRadius: '50%',
                               background: 'rgba(26, 26, 46, 0.6)',
-                              border: `3px solid ${editForm.color || avatar.color || '#667eea'}`,
+                              border: editForm.useBorder ? `3px solid ${editForm.color || '#667eea'}` : 'none',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -456,14 +470,26 @@ function AdminAvatarManager({ user, onClose }) {
                         <input
                           type="number"
                           value={editForm.price}
-                          onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                          onChange={(e) => setEditForm({ ...editForm, price: parseInt(e.target.value) || 0 })}
                           placeholder="Price"
                         />
-                        <input
-                          type="color"
-                          value={editForm.color}
-                          onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
-                        />
+                        <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', marginTop: 8 }}>
+                          <input
+                            type="checkbox"
+                            checked={editForm.useBorder}
+                            onChange={(e) => setEditForm({ ...editForm, useBorder: e.target.checked, color: e.target.checked ? (editForm.color || '#667eea') : null })}
+                            style={{ marginRight: 6 }}
+                          />
+                          Border
+                        </label>
+                        {editForm.useBorder && (
+                          <input
+                            type="color"
+                            value={editForm.color || '#667eea'}
+                            onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
+                            style={{ marginTop: 6 }}
+                          />
+                        )}
 
                         <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
                           <label style={{ fontSize: 12, opacity: 0.85 }}>Ring Scale: {Number(editForm.ringScale || 1.35).toFixed(2)}</label>
