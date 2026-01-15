@@ -52,11 +52,6 @@ function Auth({ onAuthSuccess, onContinueAsGuest }) {
     setLoading(false);
   };
 
-  const handleGuestPlay = () => {
-    soundManager.playClick();
-    onContinueAsGuest();
-  };
-
   const toggleMode = () => {
     soundManager.playClick();
     setIsSignUp(!isSignUp);
@@ -130,17 +125,6 @@ function Auth({ onAuthSuccess, onContinueAsGuest }) {
               {isSignUp ? 'Sign In' : 'Sign Up'}
             </button>
           </div>
-
-          <div className="auth-divider">
-            <span>OR</span>
-          </div>
-
-          <button onClick={handleGuestPlay} className="guest-btn">
-            Continue as Guest
-          </button>
-          <p className="guest-note">
-            Play without an account. Your progress will be saved locally.
-          </p>
         </div>
       </div>
     </div>

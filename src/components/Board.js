@@ -72,14 +72,22 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
           null,
         currentPlayer: prev.currentPlayer === 'X' ? 'O' : 'X',
         gameActive: !winner && !isDraw,
-        showWinModal: winner || isDraw,
+        showWinModal: false, // Don't show immediately
         winMessage: winner
           ? gameMode === 'bot'
             ? `${winner === 'X' ? 'You' : 'Bot'} win${winner === 'O' ? 's' : ''}!`
             : `${winner === 'X' ? (playerXName || 'Player X') : (playerOName || 'Player O')} wins!`
           : isDraw ? "It's a draw!" : '',
-        winningLine: winningLine
+        winningLine: winningLine,
+        lastWinner: winner || (isDraw ? 'draw' : null)
       }));
+
+      // Delay showing modal to let winning line animation play
+      if (winner || isDraw) {
+        setTimeout(() => {
+          setGameState(prev => ({ ...prev, showWinModal: true }));
+        }, 1200); // Show modal after line animation completes (1s animation + 200ms buffer)
+      }
     };
 
     if (!roomId || gameMode === 'bot' || gameMode === 'local') {
@@ -168,7 +176,7 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
       {playerSymbol && (
         <div className="you-are">YOU ARE {playerSymbol}</div>
       )}
-      <div className="board">
+      <div className="board" style={{ position: 'relative' }}>
         {gameState.board.map((cell, index) => (
           <Cell
             key={index}
@@ -177,9 +185,43 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
             isPulsing={index === gameState.markToRemoveIndex}
           />
         ))}
+        {gameState.winningLine && gameState.winningLine.length === 3 && (
+          <div className="winning-line-overlay">
+            <svg className="winning-line-svg" viewBox="0 0 300 300" preserveAspectRatio="none">
+              <line
+                className="winning-line-animation"
+                x1={getLineCoordinates(gameState.winningLine).x1}
+                y1={getLineCoordinates(gameState.winningLine).y1}
+                x2={getLineCoordinates(gameState.winningLine).x2}
+                y2={getLineCoordinates(gameState.winningLine).y2}
+                stroke="#ffd700"
+                strokeWidth="8"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+// Helper function to calculate line coordinates based on winning pattern
+function getLineCoordinates(winningLine) {
+  const cellSize = 100; // 100 units per cell in viewBox
+  const offset = 50; // Center of each cell
+  
+  const positions = winningLine.map(index => ({
+    x: (index % 3) * cellSize + offset,
+    y: Math.floor(index / 3) * cellSize + offset
+  }));
+  
+  return {
+    x1: positions[0].x,
+    y1: positions[0].y,
+    x2: positions[2].x,
+    y2: positions[2].y
+  };
 }
 
 export default Board;

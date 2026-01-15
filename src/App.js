@@ -64,7 +64,8 @@ function App() {
     winningLine: [],
     showRules: false,
     showWinModal: false,
-    winMessage: ''
+    winMessage: '',
+    lastWinner: null
   });
 
   // Game mode: 'home', 'local', 'bot', 'online', 'matchmaking'
@@ -709,16 +710,14 @@ function App() {
     soundManager.playClick();
 
     if (roomId) {
-      const lastWinner = gameState.winMessage.includes('X') ? 'X' :
-                         gameState.winMessage.includes('O') ? 'O' : null;
+      const lastWinner = gameState.lastWinner;
 
       await updateDoc(doc(db, 'rooms', roomId), {
         rematchRequested: true,
         winner: lastWinner || null
       });
     } else {
-      const lastWinner = gameState.winMessage.includes('X') ? 'X' :
-                         gameState.winMessage.includes('O') ? 'O' : null;
+      const lastWinner = gameState.lastWinner;
 
       if (gameMode === 'local' || gameMode === 'bot') {
         if (lastWinner === 'X') setLocalXScore(prev => prev + 1);
@@ -737,7 +736,8 @@ function App() {
         showWinModal: false,
         gameActive: true,
         currentPlayer: nextStarter,
-        startingPlayer: nextStarter
+        startingPlayer: nextStarter,
+        lastWinner: null
       }));
     }
   };
@@ -1272,6 +1272,7 @@ function App() {
               setGameState={setGameState}
               onPlayAgain={handlePlayAgain}
               onLeaveGame={handleLeaveGame}
+              onBackToHome={handleBackToHome}
             />
 
             <HostJoinModals

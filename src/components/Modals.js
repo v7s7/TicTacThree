@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Modals({ gameState, setGameState, onPlayAgain, onLeaveGame }) {
+function Modals({ gameState, setGameState, onPlayAgain, onLeaveGame, onBackToHome }) {
   return (
     <>
       {gameState.showRules && (
@@ -27,9 +27,7 @@ function Modals({ gameState, setGameState, onPlayAgain, onLeaveGame }) {
             <h2>{gameState.winMessage}</h2>
             <div className="modal-buttons">
               <button onClick={onPlayAgain}>Play Again</button>
-              {gameState.roomId && (
-                <button onClick={onLeaveGame}>Leave Game</button>
-              )}
+              <button onClick={onBackToHome}>Back to Home</button>
             </div>
           </div>
         </div>
