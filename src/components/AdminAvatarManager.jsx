@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage, db } from '../firebase';
+import { db } from '../firebase';
 import { 
   addCustomAvatar, 
   updateCustomAvatar, 
   deleteCustomAvatar,
   fetchCustomAvatars 
 } from '../utils/shopManager';
+
+const CLOUDINARY_CLOUD = 'dijsoag1f';
+const CLOUDINARY_PRESET = 'ml_default';
+const CLOUDINARY_API_KEY = '414896274751932';
 
 /**
  * Admin Panel for Managing Custom Avatars
@@ -64,14 +67,23 @@ function AdminAvatarManager({ user, onClose }) {
   };
 
   const uploadImage = async (file) => {
-    const timestamp = Date.now();
-    const filename = `custom-avatars/${timestamp}_${file.name}`;
-    const storageRef = ref(storage, filename);
-    
-    await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(storageRef);
-    
-    return downloadURL;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_PRESET);
+    formData.append('folder', 'custom-avatars');
+    formData.append('api_key', CLOUDINARY_API_KEY);
+
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error?.message || 'Failed to upload image');
+    }
+
+    return data.secure_url || data.url;
   };
 
   const handleAddAvatar = async (e) => {
