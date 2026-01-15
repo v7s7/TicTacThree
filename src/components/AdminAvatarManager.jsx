@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { 
-  addCustomAvatar, 
-  updateCustomAvatar, 
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import {
+  addCustomAvatar,
+  updateCustomAvatar,
   deleteCustomAvatar,
-  fetchCustomAvatars 
+  fetchCustomAvatars
 } from '../utils/shopManager';
-
-const CLOUDINARY_CLOUD = 'dijsoag1f';
-const CLOUDINARY_PRESET = 'ml_default';
-const CLOUDINARY_API_KEY = '414896274751932';
 
 /**
  * Admin Panel for Managing Custom Avatars
@@ -67,23 +64,54 @@ function AdminAvatarManager({ user, onClose }) {
   };
 
   const uploadImage = async (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', CLOUDINARY_PRESET);
-    formData.append('folder', 'custom-avatars');
-    formData.append('api_key', CLOUDINARY_API_KEY);
+    try {
+      // Step 1: Get signed upload parameters from Cloud Function
+      console.log('[Admin Upload] Requesting signature from Cloud Function...');
+      const functions = getFunctions();
+      const cloudinarySign = httpsCallable(functions, 'cloudinarySign');
 
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
-      method: 'POST',
-      body: formData
-    });
+      const timestamp = Math.floor(Date.now() / 1000);
+      const signResult = await cloudinarySign({
+        timestamp: timestamp,
+        folder: 'custom-avatars'
+      });
 
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data?.error?.message || 'Failed to upload image');
+      const { signature, apiKey, cloudName, folder } = signResult.data;
+      console.log('[Admin Upload] Signature received, uploading to Cloudinary...');
+
+      // Step 2: Upload to Cloudinary with signature
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('timestamp', timestamp);
+      formData.append('signature', signature);
+      formData.append('api_key', apiKey);
+      formData.append('folder', folder);
+
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        console.error('[Admin Upload] Cloudinary error:', data);
+        throw new Error(data?.error?.message || 'Failed to upload image to Cloudinary');
+      }
+
+      console.log('[Admin Upload] Upload successful:', data.secure_url);
+      return data.secure_url || data.url;
+    } catch (error) {
+      console.error('[Admin Upload] Upload failed:', error);
+      if (error.code === 'functions/unauthenticated') {
+        throw new Error('You must be logged in to upload images');
+      } else if (error.code === 'functions/permission-denied') {
+        throw new Error('Only admin users can upload images');
+      } else if (error.code === 'functions/failed-precondition') {
+        throw new Error('Server configuration error. Please contact support.');
+      } else {
+        throw new Error(error.message || 'Failed to upload image');
+      }
     }
-
-    return data.secure_url || data.url;
   };
 
   const handleAddAvatar = async (e) => {

@@ -60,6 +60,22 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
     }
   };
 
+  const handleUnequip = (item) => {
+    soundManager.playClick();
+    if (onEquip) {
+      // Unequip by reverting to default
+      const defaults = {
+        frame: 'frame_basic',
+        background: 'bg_none'
+      };
+
+      onEquip({
+        frame: item.type === 'frame' ? defaults.frame : equippedItems.frame,
+        background: item.type === 'background' ? defaults.background : equippedItems.background
+      });
+    }
+  };
+
   const items = selectedTab === 'frames' ? getAllAvatarFrames() : SHOP_ITEMS.avatarBackgrounds;
   const isOwned = (itemId) => inventory.includes(itemId);
   
@@ -197,9 +213,21 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
                           <div className="shop-item-actions">
                             {owned ? (
                               isEquipped(item.id) ? (
-                                <button className="shop-btn equipped" disabled>
-                                  Equipped
-                                </button>
+                                <>
+                                  <button className="shop-btn equipped" disabled>
+                                    ✓ Equipped
+                                  </button>
+                                  {/* Allow unequipping non-default items */}
+                                  {item.id !== 'frame_basic' && item.id !== 'bg_none' && (
+                                    <button
+                                      className="shop-btn unequip"
+                                      onClick={() => handleUnequip(item)}
+                                      style={{ marginTop: '8px' }}
+                                    >
+                                      Unequip
+                                    </button>
+                                  )}
+                                </>
                               ) : (
                                 <button className="shop-btn equip" onClick={() => handleEquip(item)}>
                                   Equip

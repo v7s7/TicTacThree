@@ -22,7 +22,7 @@ import { getBotMove } from './utils/botAI';
 import { getCoins, getStats, awardCoins, updateStats, resetAllData, setCoins as setLocalCoins } from './utils/coinsManager';
 import { soundManager } from './utils/soundManager';
 import { updateRankAfterOnlineMatch, ensureSeasonForUser, getCurrentSeasonId, handleRankChange } from './utils/rankManager';
-import { fetchCustomAvatars, loadCustomAvatars } from './utils/shopManager';
+import { fetchCustomAvatars, loadCustomAvatars, getAllAvatarFrames, SHOP_ITEMS, getDefaultAvatarConfig } from './utils/shopManager';
 import {
   rollMysteryReward,
   canClaimDailyBox,
@@ -212,6 +212,56 @@ function App() {
 
     loadCustomAvatarsFromDb();
   }, []);
+
+  // Validate and cleanup equipped avatars after data loads
+  useEffect(() => {
+    const validateEquippedAvatars = async () => {
+      if (!user || checkIsGuest(user)) return;
+
+      const allFrames = getAllAvatarFrames();
+      const allBackgrounds = SHOP_ITEMS.avatarBackgrounds;
+      const defaults = getDefaultAvatarConfig();
+
+      let needsUpdate = false;
+      let cleanFrame = userAvatar.frame;
+      let cleanBackground = userAvatar.background;
+
+      // Check if equipped frame exists and is owned
+      const frameExists = allFrames.some(f => f.id === userAvatar.frame);
+      const frameOwned = userInventory.includes(userAvatar.frame);
+
+      if (!frameExists || !frameOwned) {
+        console.warn('[Avatar Cleanup] Invalid equipped frame:', userAvatar.frame, 'exists:', frameExists, 'owned:', frameOwned);
+        cleanFrame = defaults.frame;
+        needsUpdate = true;
+      }
+
+      // Check if equipped background exists and is owned
+      const bgExists = allBackgrounds.some(b => b.id === userAvatar.background);
+      const bgOwned = userInventory.includes(userAvatar.background);
+
+      if (!bgExists || !bgOwned) {
+        console.warn('[Avatar Cleanup] Invalid equipped background:', userAvatar.background, 'exists:', bgExists, 'owned:', bgOwned);
+        cleanBackground = defaults.background;
+        needsUpdate = true;
+      }
+
+      // Update if needed
+      if (needsUpdate) {
+        console.log('[Avatar Cleanup] Cleaning up invalid equipped items, setting to:', { frame: cleanFrame, background: cleanBackground });
+        setUserAvatar({ frame: cleanFrame, background: cleanBackground });
+
+        await updateDoc(doc(db, 'users', user.uid), {
+          equippedFrame: cleanFrame,
+          equippedBackground: cleanBackground
+        });
+      }
+    };
+
+    // Run validation after a short delay to ensure custom avatars are loaded
+    const timer = setTimeout(validateEquippedAvatars, 500);
+    return () => clearTimeout(timer);
+  }, [user, userAvatar.frame, userAvatar.background, userInventory]);
 
   // Modals
   const [showSettings, setShowSettings] = useState(false);
@@ -785,15 +835,65 @@ function App() {
   };
 
   const handleAvatarUpdate = async (avatarData) => {
+    console.log('[Avatar Equip] Attempting to equip:', avatarData);
+
+    // VALIDATION: Ensure items exist and are owned
+    const allFrames = getAllAvatarFrames();
+    const allBackgrounds = SHOP_ITEMS.avatarBackgrounds;
+    const defaults = getDefaultAvatarConfig();
+
+    let validatedFrame = avatarData.frame;
+    let validatedBackground = avatarData.background;
+
+    // Validate frame
+    if (avatarData.frame) {
+      const frameExists = allFrames.some(f => f.id === avatarData.frame);
+      const frameOwned = userInventory.includes(avatarData.frame);
+
+      if (!frameExists) {
+        console.warn('[Avatar Equip] Frame does not exist:', avatarData.frame, '- falling back to default');
+        validatedFrame = defaults.frame;
+      } else if (!frameOwned) {
+        console.warn('[Avatar Equip] Frame not owned:', avatarData.frame, '- cannot equip');
+        soundManager.playError();
+        alert('You do not own this avatar frame!');
+        return;
+      }
+    }
+
+    // Validate background
+    if (avatarData.background) {
+      const bgExists = allBackgrounds.some(b => b.id === avatarData.background);
+      const bgOwned = userInventory.includes(avatarData.background);
+
+      if (!bgExists) {
+        console.warn('[Avatar Equip] Background does not exist:', avatarData.background, '- falling back to default');
+        validatedBackground = defaults.background;
+      } else if (!bgOwned) {
+        console.warn('[Avatar Equip] Background not owned:', avatarData.background, '- cannot equip');
+        soundManager.playError();
+        alert('You do not own this background!');
+        return;
+      }
+    }
+
+    const validatedAvatarData = {
+      frame: validatedFrame,
+      background: validatedBackground
+    };
+
+    console.log('[Avatar Equip] Validated and equipping:', validatedAvatarData);
+
     // Update avatar in state
-    setUserAvatar(avatarData);
+    setUserAvatar(validatedAvatarData);
 
     // Update Firestore
     if (user && !checkIsGuest(user)) {
       await updateDoc(doc(db, 'users', user.uid), {
-        equippedFrame: avatarData.frame,
-        equippedBackground: avatarData.background
+        equippedFrame: validatedAvatarData.frame,
+        equippedBackground: validatedAvatarData.background
       });
+      console.log('[Avatar Equip] Successfully saved to Firestore');
     }
   };
 
