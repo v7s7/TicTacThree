@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html lang="en" style="overflow: hidden; height: 100%; position: fixed; width: 100%;">
+<html lang="en" style="background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%); overflow: hidden; height: 100%; width: 100%; position: fixed;">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#000000" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0e27" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta
       name="description"
-      content="Web site created using create-react-app"
+      content="TicTacThree - Strategic Tic-Tac-Toe Game"
     />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <!--
@@ -27,15 +29,29 @@
     <title>TicTacThree</title>
     <style>
       /* Ensure dark background even if CSS fails to load */
+      html {
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%) !important;
+        background-attachment: fixed;
+        height: 100%;
+        width: 100%;
+      }
       body {
         margin: 0;
         padding: 0;
-        background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%);
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%) !important;
+        background-attachment: fixed;
         min-height: 100vh;
+        height: 100%;
         overflow: hidden;
+        position: fixed;
+        width: 100%;
+        top: 0;
+        left: 0;
       }
       #root {
         min-height: 100vh;
+        height: 100%;
+        background: transparent;
       }
       /* Loading indicator */
       .loading {
