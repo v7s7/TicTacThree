@@ -123,8 +123,8 @@ export const getAvatarRenderInfo = (avatar = {}, options = {}) => {
   const resolvedFrame = getAvatarFrameById(avatar.frame) || getFallbackFrame();
   const resolvedBackground = getAvatarBackgroundById(avatar.background) || getFallbackBackground();
 
-  const frameColor = resolvedFrame?.color || '#667eea';
-  const frameIsGradient = isGradient(frameColor);
+  const frameColor = resolvedFrame?.color ?? null;
+  const frameIsGradient = frameColor ? isGradient(frameColor) : false;
   const bgColor = resolvedBackground?.color;
   const bgIsGradient = isGradient(bgColor);
   const bgHasImage = !!resolvedBackground?.imageUrl;
@@ -143,7 +143,7 @@ export const getAvatarRenderInfo = (avatar = {}, options = {}) => {
     backgroundSize: undefined,
     backgroundPosition: undefined,
     backgroundRepeat: undefined,
-    border: frameIsGradient ? `${borderWidth}px solid transparent` : `${borderWidth}px solid ${frameColor}`,
+    border: frameColor ? (frameIsGradient ? `${borderWidth}px solid transparent` : `${borderWidth}px solid ${frameColor}`) : 'none',
     backgroundOrigin: undefined,
     backgroundClip: undefined,
     position: 'relative',
@@ -214,7 +214,7 @@ export const addCustomAvatar = async (avatar, db) => {
     type: 'frame',
     tier: 'custom',
     price: avatar.price || 0,
-    color: avatar.color || '#667eea',
+    color: avatar.color ?? null,
     description: avatar.description || '',
     imageUrl: avatar.imageUrl, // This is the uploaded image URL
     ringScale: Number.isFinite(avatar.ringScale) ? avatar.ringScale : 1.35,
