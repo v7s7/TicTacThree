@@ -1098,6 +1098,15 @@ function App() {
         await updateOnlineRank('win');
       } else if (gameMode === 'online') {
         soundManager.playLoss();
+        const coinReward = awardCoins('loss', 'online');
+        if (user && !checkIsGuest(user)) {
+          setCoins((prev) => prev + (coinReward.coinsAdded || 0));
+          applyFirestoreCoinDelta(coinReward.coinsAdded || 0);
+        } else {
+          setCoins(coinReward.totalCoins);
+        }
+        setCoinsEarned(coinReward.coinsAdded);
+        setTimeout(() => setCoinsEarned(0), 2000);
         updateStats('loss', 'online');
         setStats(getStats());
         await updateOnlineRank('loss');

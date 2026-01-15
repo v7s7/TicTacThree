@@ -13,6 +13,7 @@ export const COIN_REWARDS = {
   bot_hard: 50,
   local: 0,
   online: 25,
+  online_loss: 10,
   draw: 5
 };
 
@@ -147,6 +148,10 @@ export const awardCoins = (result, gameMode, difficulty = null) => {
       coinsToAdd = COIN_REWARDS.online;
     } else {
       coinsToAdd = 0; // local wins give zero
+    }
+  } else if (result === 'loss') {
+    if (gameMode === 'online') {
+      coinsToAdd = COIN_REWARDS.online_loss;
     }
   } else if (result === 'draw') {
     coinsToAdd = gameMode === 'local' ? 0 : COIN_REWARDS.draw;

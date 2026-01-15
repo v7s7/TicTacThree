@@ -7,8 +7,10 @@ body {
     -moz-osx-font-smoothing: grayscale;
     background-color: #1a1a1a;
     color: white;
-    min-height: 100vh;
-    overflow-x: hidden;
+    height: 100vh;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
 }
   code {
     font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
