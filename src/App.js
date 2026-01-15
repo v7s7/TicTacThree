@@ -95,6 +95,7 @@ function App() {
   const [friendRequestCount, setFriendRequestCount] = useState(0);
   const [inviteCount, setInviteCount] = useState(0);
   const [latestInviteName, setLatestInviteName] = useState('');
+  const [pendingFriendInvite, setPendingFriendInvite] = useState(null);
 
   const DAILY_BOX_OPEN_LIMIT = 3;
 
@@ -438,11 +439,38 @@ function App() {
   }, [user]);
 
   useEffect(() => {
+    if (!pendingFriendInvite || !user || checkIsGuest(user)) return;
+
+    const roomRef = doc(db, 'gameRooms', pendingFriendInvite.roomId);
+    const unsub = onSnapshot(roomRef, (docSnap) => {
+      if (!docSnap.exists()) {
+        setPendingFriendInvite(null);
+        return;
+      }
+
+      const data = docSnap.data();
+      if (data.status === 'playing' || data.status === 'full') {
+        handleMatchFound({
+          roomId: pendingFriendInvite.roomId,
+          playerSymbol: 'X',
+          opponentId: pendingFriendInvite.opponentId,
+          playerXName: pendingFriendInvite.playerXName,
+          playerOName: pendingFriendInvite.playerOName
+        });
+        setPendingFriendInvite(null);
+        setShowFriends(false);
+      }
+    });
+
+    return () => unsub();
+  }, [pendingFriendInvite, user]);
+
+  useEffect(() => {
     if (gameMode !== 'online' || !roomId || !user || checkIsGuest(user)) return;
     if (!gameState.showWinModal && gameState.gameActive) return;
 
     const processRivalry = async () => {
-      const roomSnap = await getDoc(doc(db, 'rooms', roomId));
+      const roomSnap = await getDoc(doc(db, 'gameRooms', roomId));
       const roomData = roomSnap.data();
       if (!roomData || roomData.status !== 'finished') return;
 
@@ -480,7 +508,7 @@ function App() {
   // Online game listeners
   useEffect(() => {
     if (!roomId) return;
-    const unsub = onSnapshot(doc(db, 'rooms', roomId), (docSnap) => {
+    const unsub = onSnapshot(doc(db, 'gameRooms', roomId), (docSnap) => {
       const data = docSnap.data();
       if (!data) return;
 
@@ -500,7 +528,7 @@ function App() {
 
       if (data.rematchRequested) {
         handleRematch(data.winner);
-        updateDoc(doc(db, 'rooms', roomId), {
+        updateDoc(doc(db, 'gameRooms', roomId), {
           rematchRequested: null,
           winner: null
         });
@@ -686,7 +714,7 @@ function App() {
     }
 
     if (roomId) {
-      await updateDoc(doc(db, 'rooms', roomId), {
+      await updateDoc(doc(db, 'gameRooms', roomId), {
         rematchRequested: null,
         board: Array(9).fill(null),
         winner: null,
@@ -720,7 +748,7 @@ function App() {
     if (roomId) {
       const lastWinner = gameState.lastWinner;
 
-      await updateDoc(doc(db, 'rooms', roomId), {
+      await updateDoc(doc(db, 'gameRooms', roomId), {
         rematchRequested: true,
         winner: lastWinner || null
       });
@@ -753,7 +781,7 @@ function App() {
   const handleLeaveGame = async () => {
     soundManager.playClick();
     if (roomId) {
-      await updateDoc(doc(db, 'rooms', roomId), {
+      await updateDoc(doc(db, 'gameRooms', roomId), {
         status: 'left',
         leftBy: playerSymbol
       });
@@ -1368,6 +1396,7 @@ function App() {
             }}
             user={user}
             userAvatar={userAvatar}
+            onInviteCreated={setPendingFriendInvite}
             onJoinGame={handleMatchFound}
           />
         )}

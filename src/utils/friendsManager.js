@@ -62,6 +62,7 @@ export const sendFriendRequest = async (fromUserId, toDisplayName, fromDisplayNa
       to: toUserId,
       fromDisplayName: fromDisplayName,
       toDisplayName: toDisplayName,
+      fromPhotoUrl: fromAvatar.photoUrl || null,
       fromEquippedFrame: fromAvatar.frame || null,
       fromEquippedBackground: fromAvatar.background || null,
       status: 'pending',
@@ -271,7 +272,7 @@ export const inviteFriendToGame = async (fromUserId, toUserId, fromDisplayName, 
   try {
     const roomId = nanoid(6).toUpperCase();
 
-    await setDoc(doc(db, 'rooms', roomId), {
+    await setDoc(doc(db, 'gameRooms', roomId), {
       board: Array(9).fill(null),
       currentPlayer: 'X',
       playerX: fromUserId,
@@ -295,6 +296,7 @@ export const inviteFriendToGame = async (fromUserId, toUserId, fromDisplayName, 
       to: toUserId,
       fromDisplayName,
       toDisplayName,
+      fromPhotoUrl: fromAvatar.photoUrl || null,
       fromEquippedFrame: fromAvatar.frame || null,
       fromEquippedBackground: fromAvatar.background || null,
       status: 'pending',
@@ -341,7 +343,7 @@ export const acceptGameInvite = async (inviteId) => {
     const invite = inviteDoc.data();
 
     // Update room status
-    await updateDoc(doc(db, 'rooms', invite.roomId), {
+    await updateDoc(doc(db, 'gameRooms', invite.roomId), {
       status: 'playing'
     });
 
@@ -359,7 +361,7 @@ export const acceptGameInvite = async (inviteId) => {
 export const declineGameInvite = async (inviteId, roomId) => {
   try {
     // Delete room and invite
-    await deleteDoc(doc(db, 'rooms', roomId));
+    await deleteDoc(doc(db, 'gameRooms', roomId));
     await deleteDoc(doc(db, 'gameInvites', inviteId));
     return { success: true };
   } catch (error) {

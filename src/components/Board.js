@@ -7,7 +7,7 @@ import { soundManager } from '../utils/soundManager';
 function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGameEnd, playerXName, playerOName, isBotThinking }) {
   useEffect(() => {
     if (!roomId) return;
-    const roomRef = doc(db, 'rooms', roomId);
+    const roomRef = doc(db, 'gameRooms', roomId);
     const unsubscribe = onSnapshot(roomRef, (docSnap) => {
       const data = docSnap.data();
       if (data) {
@@ -117,7 +117,7 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
 
     if (gameState.currentPlayer !== playerSymbol) return;
 
-    const roomRef = doc(db, 'rooms', roomId);
+    const roomRef = doc(db, 'gameRooms', roomId);
     const roomSnap = await getDoc(roomRef);
     const data = roomSnap.data();
 

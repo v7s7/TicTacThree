@@ -6,7 +6,7 @@ import { doc, setDoc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomId, joinRoomId, setJoinRoomId, setRoomId, setPlayerSymbol, setShowHostModal, setShowJoinModal, setOnlineXScore, setOnlineOScore, setGameStarted, setGameMode, user, setPlayerXName, setPlayerOName }) {
 
   const handleCreateGame = async () => {
-    const roomRef = doc(db, 'rooms', hostRoomId);
+    const roomRef = doc(db, 'gameRooms', hostRoomId);
     const hostName = user?.displayName || 'Host';
     await setDoc(roomRef, {
       board: Array(9).fill(null),
@@ -43,7 +43,7 @@ function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomI
 
   const handleJoinGame = async () => {
     if (!joinRoomId) return;
-    const roomRef = doc(db, 'rooms', joinRoomId);
+    const roomRef = doc(db, 'gameRooms', joinRoomId);
     const roomSnap = await getDoc(roomRef);
     const data = roomSnap.data();
     if (!data) return alert('Room not found.');

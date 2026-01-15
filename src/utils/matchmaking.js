@@ -15,7 +15,7 @@ import {
 import { nanoid } from 'nanoid';
 
 const MATCHMAKING_COLLECTION = 'matchmaking_queue';
-const ACTIVE_GAMES_COLLECTION = 'rooms';
+const ACTIVE_GAMES_COLLECTION = 'gameRooms';
 const QUEUE_TIMEOUT = 60000; // 60 seconds
 
 // Join matchmaking queue

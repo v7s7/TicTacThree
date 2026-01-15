@@ -14,7 +14,7 @@ import {
 import { soundManager } from '../utils/soundManager';
 import { getAvatarRenderInfo } from '../utils/shopManager';
 
-function FriendsList({ onClose, user, onJoinGame, userAvatar }) {
+function FriendsList({ onClose, user, onJoinGame, onInviteCreated, userAvatar }) {
   const [friends, setFriends] = useState([]);
   const [requests, setRequests] = useState([]);
   const [gameInvites, setGameInvites] = useState([]);
@@ -60,7 +60,11 @@ function FriendsList({ onClose, user, onJoinGame, userAvatar }) {
       user.uid,
       addFriendName,
       user.displayName || user.email,
-      { frame: user?.equippedFrame || userAvatar?.frame, background: user?.equippedBackground || userAvatar?.background }
+      { 
+        photoUrl: user?.photoURL || user?.avatarUrl,
+        frame: user?.equippedFrame || userAvatar?.frame, 
+        background: user?.equippedBackground || userAvatar?.background 
+      }
     );
 
     if (result.success) {
@@ -109,13 +113,25 @@ function FriendsList({ onClose, user, onJoinGame, userAvatar }) {
       friend.id,
       user.displayName || user.email,
       friend.displayName,
-      { frame: user?.equippedFrame || userAvatar?.frame, background: user?.equippedBackground || userAvatar?.background }
+      { 
+        photoUrl: user?.photoURL || user?.avatarUrl,
+        frame: user?.equippedFrame || userAvatar?.frame, 
+        background: user?.equippedBackground || userAvatar?.background 
+      }
     );
 
     if (result.success) {
       soundManager.playCoin();
       setMessage(`Invite sent to ${friend.displayName}!`);
       setTimeout(() => setMessage(''), 3000);
+
+      onInviteCreated?.({
+        roomId: result.roomId,
+        opponentId: friend.id,
+        playerXName: user?.displayName || 'You',
+        playerOName: friend.displayName
+      });
+      onClose();
     } else {
       soundManager.playError();
       setMessage(result.error);
@@ -149,18 +165,30 @@ function FriendsList({ onClose, user, onJoinGame, userAvatar }) {
 
   const renderAvatar = (name, photoUrl, avatar = {}) => {
     const letter = name?.[0]?.toUpperCase() || '?';
+    const avatarRender = getAvatarRenderInfo(avatar, { borderWidth: 2, contentScale: 0.78 });
 
     if (photoUrl) {
       return (
         <div
           className="friend-avatar with-photo"
-          style={{ backgroundImage: `url(${photoUrl})` }}
+          style={{ 
+            ...avatarRender.style,
+            backgroundImage: `url(${photoUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
           aria-label={name}
-        />
+        >
+          {avatarRender.ringUrl && (
+            <img
+              src={avatarRender.ringUrl}
+              alt="Avatar Ring"
+              style={avatarRender.ringStyle}
+            />
+          )}
+        </div>
       );
     }
-
-    const avatarRender = getAvatarRenderInfo(avatar, { borderWidth: 2, contentScale: 0.78 });
 
     return (
       <div
