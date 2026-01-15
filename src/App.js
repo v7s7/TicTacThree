@@ -16,7 +16,7 @@ import FriendsList from './components/FriendsList';
 import AdminAvatarManager from './components/AdminAvatarManager';
 import './styles/App.css';
 import { db } from './firebase';
-import { doc, updateDoc, onSnapshot, arrayUnion, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, arrayUnion, getDoc, runTransaction, increment } from 'firebase/firestore';
 import { nanoid } from 'nanoid';
 import { getBotMove } from './utils/botAI';
 import { getCoins, getStats, awardCoins, updateStats, resetAllData, setCoins as setLocalCoins } from './utils/coinsManager';
@@ -96,6 +96,18 @@ function App() {
   const [latestInviteName, setLatestInviteName] = useState('');
 
   const DAILY_BOX_OPEN_LIMIT = 3;
+
+  const applyFirestoreCoinDelta = useCallback(async (delta) => {
+    if (!delta) return;
+    if (!user || checkIsGuest(user)) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        coins: increment(delta)
+      });
+    } catch (e) {
+      console.error('[Coins Sync] Failed to apply delta:', delta, e);
+    }
+  }, [user]);
 
   const persistBoxState = useCallback(async (boxes, progress, lastClaim, dailyOpens = dailyBoxOpens) => {
     const normalizedDaily = normalizeDailyBoxOpenState(dailyOpens?.date, dailyOpens?.count);
@@ -319,12 +331,7 @@ function App() {
           if (!adminFlag) {
             setShowAdminPanel(false);
           }
-          setCoins(userData.data.coins || 0);
-          setUserInventory(userData.data.inventory || ['frame_basic', 'bg_none']);
-          setUserAvatar({
-            frame: userData.data.equippedFrame || 'frame_basic',
-            background: userData.data.equippedBackground || 'bg_none'
-          });
+          // Coins/inventory/avatar are kept in sync via the realtime user doc listener.
 
           const rank = seasonState?.rank || userData.data.rank || 'Bronze';
           const seasonScore = seasonState?.seasonScore ?? userData.data.seasonScore ?? 0;
@@ -372,6 +379,38 @@ function App() {
 
     return () => unsubscribe();
   }, []);
+
+  // Realtime user doc sync (silent refresh across devices/tabs)
+  useEffect(() => {
+    if (!user || checkIsGuest(user)) return;
+
+    const userRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(
+      userRef,
+      (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data() || {};
+
+        setCoins(typeof data.coins === 'number' ? data.coins : 0);
+        setUserInventory(Array.isArray(data.inventory) ? data.inventory : ['frame_basic', 'bg_none']);
+        setUserAvatar({
+          frame: data.equippedFrame || 'frame_basic',
+          background: data.equippedBackground || 'bg_none'
+        });
+
+        const adminFlag = Boolean(data.isAdmin);
+        setIsAdmin(adminFlag);
+        if (!adminFlag) {
+          setShowAdminPanel(false);
+        }
+      },
+      (error) => {
+        console.error('[User Sync] onSnapshot error:', error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     if (!user || checkIsGuest(user)) {
@@ -526,7 +565,12 @@ function App() {
       soundManager.playLoss();
       const result = 'loss'; // Bot won, so player lost
       const coinReward = awardCoins(result, 'bot', botDifficulty);
-      setCoins(coinReward.totalCoins);
+      if (user && !checkIsGuest(user)) {
+        setCoins((prev) => prev + (coinReward.coinsAdded || 0));
+        applyFirestoreCoinDelta(coinReward.coinsAdded || 0);
+      } else {
+        setCoins(coinReward.totalCoins);
+      }
       setCoinsEarned(coinReward.coinsAdded);
       setTimeout(() => setCoinsEarned(0), 2000);
       updateStats(result, 'bot', botDifficulty);
@@ -534,7 +578,12 @@ function App() {
     } else if (isDraw) {
       soundManager.playDraw();
       const coinReward = awardCoins('draw', 'bot', botDifficulty);
-      setCoins(coinReward.totalCoins);
+      if (user && !checkIsGuest(user)) {
+        setCoins((prev) => prev + (coinReward.coinsAdded || 0));
+        applyFirestoreCoinDelta(coinReward.coinsAdded || 0);
+      } else {
+        setCoins(coinReward.totalCoins);
+      }
       setCoinsEarned(coinReward.coinsAdded);
       setTimeout(() => setCoinsEarned(0), 2000);
       updateStats('draw', 'bot', botDifficulty);
@@ -814,24 +863,46 @@ function App() {
     if (!item || !item.id) return;
     if (userInventory.includes(item.id)) return;
 
-    // Spend coins locally
-    setCoins((prev) => {
-      const next = Math.max(0, prev - (item.price || 0));
-      if (!user || checkIsGuest(user)) {
+    const price = Number(item.price) || 0;
+
+    // Guests: keep localStorage behavior
+    if (!user || checkIsGuest(user)) {
+      setCoins((prev) => {
+        const next = Math.max(0, prev - price);
         setLocalCoins(next);
-      }
-      return next;
-    });
-
-    // Update inventory in state
-    const newInventory = [...userInventory, item.id];
-    setUserInventory(newInventory);
-
-    // Update Firestore
-    if (user && !checkIsGuest(user)) {
-      await updateDoc(doc(db, 'users', user.uid), {
-        inventory: arrayUnion(item.id)
+        return next;
       });
+      setUserInventory((prev) => (prev.includes(item.id) ? prev : [...prev, item.id]));
+      return;
+    }
+
+    // Auth users: atomic Firestore update (coins + inventory)
+    try {
+      await runTransaction(db, async (tx) => {
+        const userRef = doc(db, 'users', user.uid);
+        const snap = await tx.get(userRef);
+        if (!snap.exists()) throw new Error('User not found');
+
+        const data = snap.data() || {};
+        const currentCoins = typeof data.coins === 'number' ? data.coins : 0;
+        const currentInventory = Array.isArray(data.inventory) ? data.inventory : ['frame_basic', 'bg_none'];
+
+        if (currentInventory.includes(item.id)) return;
+        if (currentCoins < price) throw new Error('Not enough coins');
+
+        tx.update(userRef, {
+          coins: currentCoins - price,
+          inventory: [...currentInventory, item.id]
+        });
+      });
+
+      // Optimistic local update; onSnapshot will also refresh.
+      setCoins((prev) => Math.max(0, prev - price));
+      setUserInventory((prev) => (prev.includes(item.id) ? prev : [...prev, item.id]));
+    } catch (e) {
+      console.error('[Shop Purchase] Failed:', e);
+      soundManager.playError();
+      alert(e?.message || 'Purchase failed');
     }
   };
 
@@ -981,7 +1052,12 @@ function App() {
         if (winner === 'X') {
           soundManager.playWin();
           const coinReward = awardCoins('win', 'bot', botDifficulty);
-          setCoins(coinReward.totalCoins);
+          if (user && !checkIsGuest(user)) {
+            setCoins((prev) => prev + (coinReward.coinsAdded || 0));
+            applyFirestoreCoinDelta(coinReward.coinsAdded || 0);
+          } else {
+            setCoins(coinReward.totalCoins);
+          }
           setCoinsEarned(coinReward.coinsAdded);
           setTimeout(() => setCoinsEarned(0), 2000);
           updateStats('win', 'bot', botDifficulty);
@@ -995,7 +1071,12 @@ function App() {
         soundManager.playWin();
         // Award coins only once for local games
         const coinReward = awardCoins('win', 'local');
-        setCoins(coinReward.totalCoins);
+        if (user && !checkIsGuest(user)) {
+          setCoins((prev) => prev + (coinReward.coinsAdded || 0));
+          applyFirestoreCoinDelta(coinReward.coinsAdded || 0);
+        } else {
+          setCoins(coinReward.totalCoins);
+        }
         setCoinsEarned(coinReward.coinsAdded);
         setTimeout(() => setCoinsEarned(0), 2000);
         updateStats('win', 'local');
@@ -1003,7 +1084,12 @@ function App() {
       } else if (gameMode === 'online' && winner === playerSymbol) {
         soundManager.playWin();
         const coinReward = awardCoins('win', 'online');
-        setCoins(coinReward.totalCoins);
+        if (user && !checkIsGuest(user)) {
+          setCoins((prev) => prev + (coinReward.coinsAdded || 0));
+          applyFirestoreCoinDelta(coinReward.coinsAdded || 0);
+        } else {
+          setCoins(coinReward.totalCoins);
+        }
         setCoinsEarned(coinReward.coinsAdded);
         setTimeout(() => setCoinsEarned(0), 2000);
         updateStats('win', 'online');
@@ -1022,13 +1108,18 @@ function App() {
     } else if (isDraw) {
       soundManager.playDraw();
       const coinReward = awardCoins('draw', gameMode, botDifficulty);
-      setCoins(coinReward.totalCoins);
+      if (user && !checkIsGuest(user)) {
+        setCoins((prev) => prev + (coinReward.coinsAdded || 0));
+        applyFirestoreCoinDelta(coinReward.coinsAdded || 0);
+      } else {
+        setCoins(coinReward.totalCoins);
+      }
       setCoinsEarned(coinReward.coinsAdded);
       setTimeout(() => setCoinsEarned(0), 2000);
       updateStats('draw', gameMode, botDifficulty);
       setStats(getStats());
     }
-  }, [gameMode, botDifficulty, playerSymbol, applyWinTowardBox, user, rankInfo.rank, userAvatar.frame]);
+  }, [gameMode, botDifficulty, playerSymbol, applyWinTowardBox, user, rankInfo.rank, userAvatar.frame, applyFirestoreCoinDelta]);
 
   // Show loading while checking auth
   if (authLoading) {
