@@ -52,7 +52,7 @@ This checklist verifies that all avatar/background bugs are fixed and the system
 
 ## PHASE 2: Custom Avatar Tests
 
-### Test 2.1: Admin Upload (Secure Flow)
+### Test 2.1: Admin Upload (FREE Unsigned Flow)
 - [ ] Log in as admin user
 - [ ] Go to Settings > Admin Panel
 - [ ] Select an image file (< 2MB, .jpg/.png)
@@ -64,20 +64,18 @@ This checklist verifies that all avatar/background bugs are fixed and the system
 - [ ] Click "Add Avatar"
 - [ ] **CRITICAL:** Open DevTools > Network tab
 - [ ] Verify NO API secrets visible in requests
-- [ ] Verify request goes to `cloudinarySign` Cloud Function
+- [ ] Verify request goes directly to Cloudinary (not Cloud Function)
+- [ ] Verify request uses `upload_preset` parameter
 - [ ] Expected: Avatar uploads successfully
 - [ ] Verify avatar appears in shop under "Custom Uploaded"
 
 ### Test 2.2: Non-Admin Upload Blocked
 - [ ] Log in as NON-admin user
 - [ ] Verify "Admin Panel" button is NOT visible in Settings
-- [ ] Try to call Cloud Function directly (in console):
-  ```javascript
-  const functions = getFunctions();
-  const sign = httpsCallable(functions, 'cloudinarySign');
-  sign({ timestamp: Date.now(), folder: 'custom-avatars' });
-  ```
-- [ ] Expected: Error "permission-denied"
+- [ ] Try to manually create custom avatar in Firestore (if rules allow console access)
+- [ ] Expected: Firestore rules block the write
+- [ ] Note: Unsigned uploads can't be blocked client-side, but admin UI is hidden
+- [ ] Firestore rules ensure only admins can save avatar metadata to DB
 
 ### Test 2.3: Custom Avatar Equip
 - [ ] As regular user, go to Shop
@@ -155,20 +153,23 @@ This checklist verifies that all avatar/background bugs are fixed and the system
   Expected: ALLOWED
   ```
 
-### Test 4.4: Cloud Function - Unauthenticated Call Blocked
-- [ ] Log out (not authenticated)
-- [ ] Try to call `cloudinarySign` function
-- [ ] Expected: Error "unauthenticated"
+### Test 4.4: Cloudinary Unsigned Upload Security
+- [ ] Open DevTools > Network tab
+- [ ] Upload a custom avatar as admin
+- [ ] Check the request to Cloudinary
+- [ ] Verify: ONLY `upload_preset`, `folder`, and `file` are sent
+- [ ] Verify: NO `api_secret` or `signature` in request
+- [ ] Expected: Upload succeeds with public preset only
 
 ### Test 4.5: Source Code Security Audit
 - [ ] Search entire codebase for:
-  - [ ] `CLOUDINARY_API_SECRET` (should ONLY be in functions/ or .env.example)
-  - [ ] Hardcoded API secrets (should find NONE in src/)
-  - [ ] `api_secret` in AdminAvatarManager.jsx (should be REMOVED)
+  - [ ] `CLOUDINARY_API_SECRET` (should NOT exist anywhere)
+  - [ ] Hardcoded API secrets (should find NONE)
+  - [ ] Only `CLOUDINARY_CLOUD_NAME` and `CLOUDINARY_UPLOAD_PRESET` should exist (public values)
 - [ ] Build production bundle: `npm run build`
 - [ ] Search build/static/js/*.js for:
   - [ ] `api_secret` (should NOT appear)
-  - [ ] Cloudinary secret (should NOT appear)
+  - [ ] Only cloud name and preset name (both public, safe)
 
 ---
 
