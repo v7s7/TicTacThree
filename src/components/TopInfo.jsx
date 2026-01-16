@@ -32,6 +32,7 @@ function TopInfo({
   localOScore,
   onlineXScore,
   onlineOScore,
+  roundNumber,
   gameState,
   opponentLeft,
   gameMode,
@@ -83,6 +84,10 @@ function TopInfo({
 
       {roomId && (
         <p>Room Code: <strong style={{ color: '#667eea' }}>{roomId}</strong></p>
+      )}
+
+      {roundNumber && (
+        <p style={{ marginTop: '6px' }}>Round: <strong style={{ color: '#ffd700' }}>{roundNumber}</strong></p>
       )}
 
       {gameMode === 'online' ? (

@@ -596,6 +596,34 @@ body {
   margin-left: 5px;
 }
 
+/* ============= TOAST NOTIFICATION ============= */
+.toast-notification {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  background: rgba(26, 26, 46, 0.95);
+  border: 1.5px solid rgba(255, 193, 7, 0.5);
+  color: #ffd86b;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  animation: toastSlideIn 0.25s ease-out;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .animate-coin {
   animation: coinPop 0.5s ease-out;
 }

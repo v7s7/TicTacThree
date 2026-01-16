@@ -86,7 +86,9 @@ function Shop({ onClose, coins, inventory, onPurchase, equippedItems, rankInfo, 
     // Group by tier
     const groups = {};
     TIER_ORDER.forEach(tier => {
-      groups[tier] = filtered.filter(item => item.tier === tier);
+      groups[tier] = filtered
+        .filter(item => item.tier === tier)
+        .sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
     });
     
     return groups;

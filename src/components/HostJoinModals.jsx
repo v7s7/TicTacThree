@@ -1,7 +1,7 @@
 import React from 'react';
 import { nanoid } from 'nanoid';
 import { db } from '../firebase';
-import { doc, setDoc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, onSnapshot, runTransaction } from 'firebase/firestore';
 
 function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomId, joinRoomId, setJoinRoomId, setRoomId, setPlayerSymbol, setShowHostModal, setShowJoinModal, setOnlineXScore, setOnlineOScore, setGameStarted, setGameMode, user, setPlayerXName, setPlayerOName }) {
 
@@ -16,6 +16,14 @@ function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomI
       playerXName: hostName,
       playerOName: 'Waiting...',
       status: 'waiting',
+      readyX: true,
+      readyO: false,
+      startedAt: null,
+      round: 1,
+      rematchRequested: null,
+      rematchRequestedBy: null,
+      rematchNonce: null,
+      rematchHandled: null,
       winner: null,
       private: false,
       createdAt: Date.now(),
@@ -30,11 +38,12 @@ function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomI
     setShowHostModal(false);
     setOnlineXScore(0);
     setOnlineOScore(0);
+    setGameStarted(false);
     if (setGameMode) setGameMode('online');
 
     onSnapshot(roomRef, (docSnap) => {
       const data = docSnap.data();
-      if (data && data.playerO) {
+      if (data && data.status === 'playing') {
         if (data.playerOName) setPlayerOName(data.playerOName);
         setGameStarted(true);
       }
@@ -44,26 +53,48 @@ function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomI
   const handleJoinGame = async () => {
     if (!joinRoomId) return;
     const roomRef = doc(db, 'gameRooms', joinRoomId);
-    const roomSnap = await getDoc(roomRef);
-    const data = roomSnap.data();
-    if (!data) return alert('Room not found.');
-    if (data.private) return alert('This room is private.');
-
     const guestName = user?.displayName || 'Guest';
-    await updateDoc(roomRef, {
-      playerO: 'guest',
-      playerOName: guestName,
-      status: 'full'
-    });
-    setPlayerXName(data.playerXName || 'Player X');
-    setPlayerOName(guestName);
-    setRoomId(joinRoomId);
-    setPlayerSymbol('O');
-    setShowJoinModal(false);
-    setOnlineXScore(0);
-    setOnlineOScore(0);
-    setGameStarted(true);
-    if (setGameMode) setGameMode('online');
+
+    try {
+      const result = await runTransaction(db, async (transaction) => {
+        const roomSnap = await transaction.get(roomRef);
+        if (!roomSnap.exists()) return { success: false, error: 'Room not found.' };
+
+        const data = roomSnap.data();
+        if (data.private) return { success: false, error: 'This room is private.' };
+        if (data.playerO) return { success: false, error: 'Room is already full.' };
+        if (data.status === 'left') return { success: false, error: 'Room is no longer available.' };
+
+        const playerXName = data.playerXName || 'Player X';
+        transaction.update(roomRef, {
+          playerO: 'guest',
+          playerOName: guestName,
+          readyO: true,
+          status: data.readyX ? 'playing' : 'waiting',
+          startedAt: data.readyX ? Date.now() : null
+        });
+
+        return { success: true, playerXName };
+      });
+
+      if (!result.success) {
+        alert(result.error || 'Unable to join room.');
+        return;
+      }
+
+      setPlayerXName(result.playerXName || 'Player X');
+      setPlayerOName(guestName);
+      setRoomId(joinRoomId);
+      setPlayerSymbol('O');
+      setShowJoinModal(false);
+      setOnlineXScore(0);
+      setOnlineOScore(0);
+      setGameStarted(false);
+      if (setGameMode) setGameMode('online');
+    } catch (error) {
+      console.error('Join room failed:', error);
+      alert('Failed to join room.');
+    }
   };
 
   return (

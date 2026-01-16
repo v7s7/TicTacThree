@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Board from './components/Board';
 import Modals from './components/Modals';
 import TopInfo from './components/TopInfo';
@@ -96,8 +96,21 @@ function App() {
   const [inviteCount, setInviteCount] = useState(0);
   const [latestInviteName, setLatestInviteName] = useState('');
   const [pendingFriendInvite, setPendingFriendInvite] = useState(null);
+  const [toastMessage, setToastMessage] = useState('');
+  const toastTimerRef = useRef(null);
 
   const DAILY_BOX_OPEN_LIMIT = 3;
+
+  const showToast = useCallback((message, duration = 2200) => {
+    setToastMessage(message);
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage('');
+      toastTimerRef.current = null;
+    }, duration);
+  }, []);
 
   const applyFirestoreCoinDelta = useCallback(async (delta) => {
     if (!delta) return;
@@ -194,6 +207,10 @@ function App() {
           }
           return total;
         });
+        if (user && !checkIsGuest(user)) {
+          await applyFirestoreCoinDelta(coinsToGrant);
+        }
+        showToast(`+${coinsToGrant} coins added`);
       }
 
       if (grantedItem) {
@@ -296,6 +313,7 @@ function App() {
   // Local game state
   const [localXScore, setLocalXScore] = useState(0);
   const [localOScore, setLocalOScore] = useState(0);
+  const [roundNumber, setRoundNumber] = useState(1);
 
   // Online game state
   const [onlineXScore, setOnlineXScore] = useState(0);
@@ -449,7 +467,7 @@ function App() {
       }
 
       const data = docSnap.data();
-      if (data.status === 'playing' || data.status === 'full') {
+      if (data.status === 'playing') {
         handleMatchFound({
           roomId: pendingFriendInvite.roomId,
           playerSymbol: 'X',
@@ -512,6 +530,13 @@ function App() {
       const data = docSnap.data();
       if (!data) return;
 
+      if (gameMode === 'online') {
+        setGameStarted(data.status === 'playing' || data.status === 'finished');
+        if (typeof data.round === 'number') {
+          setRoundNumber(data.round);
+        }
+      }
+
       if (data.playerX && data.playerO) {
         const inferredOpponent = playerSymbol === 'X' ? data.playerO : playerSymbol === 'O' ? data.playerX : null;
         if (inferredOpponent && inferredOpponent !== opponentId) {
@@ -527,11 +552,7 @@ function App() {
       }
 
       if (data.rematchRequested) {
-        handleRematch(data.winner);
-        updateDoc(doc(db, 'gameRooms', roomId), {
-          rematchRequested: null,
-          winner: null
-        });
+        handleRematch(data.winner, data.round, data.rematchNonce, data.rematchRequestedBy);
       }
     });
     return () => unsub();
@@ -696,7 +717,7 @@ function App() {
     }));
   };
 
-  const handleRematch = async (lastWinner) => {
+  const handleRematch = async (lastWinner, roundFromRoom, rematchNonce, rematchRequestedBy) => {
     const nextStarter = lastWinner === 'X' ? 'O' : lastWinner === 'O' ? 'X' : gameState.startingPlayer === 'X' ? 'O' : 'X';
     let newXScore = 0;
     let newOScore = 0;
@@ -714,15 +735,42 @@ function App() {
     }
 
     if (roomId) {
-      await updateDoc(doc(db, 'gameRooms', roomId), {
-        rematchRequested: null,
-        board: Array(9).fill(null),
-        winner: null,
-        currentPlayer: nextStarter,
-        playerXMarks: [],
-        playerOMarks: [],
-        markToRemoveIndex: null
-      });
+      const shouldWriteRoom = !rematchRequestedBy || rematchRequestedBy === playerSymbol;
+      if (shouldWriteRoom) {
+        try {
+          await runTransaction(db, async (transaction) => {
+            const roomRef = doc(db, 'gameRooms', roomId);
+            const snap = await transaction.get(roomRef);
+            if (!snap.exists()) return;
+            const data = snap.data() || {};
+
+            if (!data.rematchRequested) return;
+            if (rematchNonce && data.rematchHandled === rematchNonce) return;
+            if (rematchNonce && data.rematchNonce !== rematchNonce) return;
+
+            const currentRound = typeof data.round === 'number' ? data.round : (typeof roundFromRoom === 'number' ? roundFromRoom : 1);
+            const nextRound = currentRound + 1;
+
+            transaction.update(roomRef, {
+              rematchRequested: null,
+              rematchRequestedBy: null,
+              rematchNonce: null,
+              rematchHandled: rematchNonce || null,
+              board: Array(9).fill(null),
+              winner: null,
+              currentPlayer: nextStarter,
+              playerXMarks: [],
+              playerOMarks: [],
+              markToRemoveIndex: null,
+              round: nextRound
+            });
+          });
+        } catch (error) {
+          console.error('Failed to apply rematch update:', error);
+        }
+      }
+    } else {
+      setRoundNumber((prev) => prev + 1);
     }
 
     setGameState(prev => ({
@@ -750,6 +798,8 @@ function App() {
 
       await updateDoc(doc(db, 'gameRooms', roomId), {
         rematchRequested: true,
+        rematchRequestedBy: playerSymbol || null,
+        rematchNonce: nanoid(8),
         winner: lastWinner || null
       });
     } else {
@@ -761,6 +811,7 @@ function App() {
       }
 
       const nextStarter = lastWinner === 'X' ? 'O' : lastWinner === 'O' ? 'X' : gameState.startingPlayer === 'X' ? 'O' : 'X';
+      setRoundNumber((prev) => prev + 1);
       setGameState(prev => ({
         ...prev,
         board: Array(9).fill(null),
@@ -805,6 +856,7 @@ function App() {
       setLocalOScore(0);
       setBotDifficulty(null);
     }
+    setRoundNumber(1);
     setOpponentId(null);
     setProcessedResultId(null);
   };
@@ -818,13 +870,16 @@ function App() {
       resetBoardFull();
       setLocalXScore(0);
       setLocalOScore(0);
+      setRoundNumber(1);
     } else if (mode === 'local') {
       setGameMode('local');
       resetBoardFull();
       setLocalXScore(0);
       setLocalOScore(0);
+      setRoundNumber(1);
     } else if (mode === 'online') {
       setGameMode('matchmaking');
+      setRoundNumber(1);
     }
   };
 
@@ -1034,19 +1089,54 @@ function App() {
     }
   };
 
+  const markPlayerReady = async (targetRoomId, symbol) => {
+    if (!targetRoomId || !symbol) return;
+    try {
+      const roomRef = doc(db, 'gameRooms', targetRoomId);
+      await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(roomRef);
+        if (!snap.exists()) return;
+        const data = snap.data() || {};
+
+        const updates = {};
+        if (symbol === 'X' && data.readyX !== true) updates.readyX = true;
+        if (symbol === 'O' && data.readyO !== true) updates.readyO = true;
+
+        const nextReadyX = updates.readyX !== undefined ? updates.readyX : data.readyX;
+        const nextReadyO = updates.readyO !== undefined ? updates.readyO : data.readyO;
+
+        if (nextReadyX && nextReadyO && data.status !== 'playing') {
+          updates.status = 'playing';
+          updates.startedAt = Date.now();
+        }
+
+        if (Object.keys(updates).length > 0) {
+          transaction.update(roomRef, updates);
+        }
+      });
+    } catch (error) {
+      console.error('Failed to mark player ready:', error);
+    }
+  };
+
   const handleMatchFound = (matchData) => {
     setRoomId(matchData.roomId);
     setPlayerSymbol(matchData.playerSymbol);
     setOpponentId(matchData.opponentId || null);
     setProcessedResultId(null);
-    setGameStarted(true);
+    setGameStarted(false);
     setGameMode('online');
     setOnlineXScore(0);
     setOnlineOScore(0);
+    setRoundNumber(1);
 
     // Set player names from match data
     if (matchData.playerXName) setPlayerXName(matchData.playerXName);
     if (matchData.playerOName) setPlayerOName(matchData.playerOName);
+
+    if (matchData.roomId && matchData.playerSymbol) {
+      markPlayerReady(matchData.roomId, matchData.playerSymbol);
+    }
   };
 
   const handleCreateRoom = () => {
@@ -1218,6 +1308,11 @@ function App() {
 
   return (
     <div className="app-container">
+      {toastMessage && (
+        <div className="toast-notification" role="status" aria-live="polite">
+          {toastMessage}
+        </div>
+      )}
       {gameMode !== 'home' && gameMode !== 'matchmaking' && (
         <CoinDisplay coins={coins} coinsEarned={coinsEarned} />
       )}
@@ -1263,6 +1358,7 @@ function App() {
               localOScore={localOScore}
               onlineXScore={onlineXScore}
               onlineOScore={onlineOScore}
+              roundNumber={roundNumber}
               gameState={gameState}
               opponentLeft={opponentLeft}
               gameMode={gameMode}

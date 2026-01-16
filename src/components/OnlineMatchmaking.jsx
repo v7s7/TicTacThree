@@ -49,6 +49,8 @@ function OnlineMatchmaking({ userId, displayName, onMatchFound, onCancel, onCrea
     const matchResult = await findMatch(userId, displayName);
     if (matchResult.success) {
       soundManager.playCoin();
+      setSearching(false);
+      await leaveQueue(userId);
       onMatchFound(matchResult);
       return;
     }

@@ -13,7 +13,8 @@ import {
   arrayUnion,
   arrayRemove,
   serverTimestamp,
-  onSnapshot
+  onSnapshot,
+  runTransaction
 } from 'firebase/firestore';
 import { nanoid } from 'nanoid';
 
@@ -278,6 +279,14 @@ export const inviteFriendToGame = async (fromUserId, toUserId, fromDisplayName, 
       playerXName: fromDisplayName,
       playerOName: toDisplayName,
       status: 'waiting',
+      readyX: true,
+      readyO: false,
+      startedAt: null,
+      round: 1,
+      rematchRequested: null,
+      rematchRequestedBy: null,
+      rematchNonce: null,
+      rematchHandled: null,
       winner: null,
       private: true,
       createdAt: Date.now(),
@@ -340,9 +349,19 @@ export const acceptGameInvite = async (inviteId) => {
 
     const invite = inviteDoc.data();
 
-    // Update room status
-    await updateDoc(doc(db, 'gameRooms', invite.roomId), {
-      status: 'playing'
+    const roomRef = doc(db, 'gameRooms', invite.roomId);
+    await runTransaction(db, async (transaction) => {
+      const roomSnap = await transaction.get(roomRef);
+      if (!roomSnap.exists()) throw new Error('Room not found');
+
+      const roomData = roomSnap.data() || {};
+      const readyX = roomData.readyX === true;
+
+      transaction.update(roomRef, {
+        readyO: true,
+        status: readyX ? 'playing' : 'waiting',
+        startedAt: readyX ? Date.now() : null
+      });
     });
 
     // Delete invite
