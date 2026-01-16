@@ -456,6 +456,56 @@ function App() {
     };
   }, [user]);
 
+  const markPlayerReady = useCallback(async (targetRoomId, symbol) => {
+    if (!targetRoomId || !symbol) return;
+    try {
+      const roomRef = doc(db, 'gameRooms', targetRoomId);
+      await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(roomRef);
+        if (!snap.exists()) return;
+        const data = snap.data() || {};
+
+        const updates = {};
+        if (symbol === 'X' && data.readyX !== true) updates.readyX = true;
+        if (symbol === 'O' && data.readyO !== true) updates.readyO = true;
+
+        const nextReadyX = updates.readyX !== undefined ? updates.readyX : data.readyX;
+        const nextReadyO = updates.readyO !== undefined ? updates.readyO : data.readyO;
+
+        if (nextReadyX && nextReadyO && data.status !== 'playing') {
+          updates.status = 'playing';
+          updates.startedAt = Date.now();
+        }
+
+        if (Object.keys(updates).length > 0) {
+          transaction.update(roomRef, updates);
+        }
+      });
+    } catch (error) {
+      console.error('Failed to mark player ready:', error);
+    }
+  }, []);
+
+  const handleMatchFound = useCallback((matchData) => {
+    setRoomId(matchData.roomId);
+    setPlayerSymbol(matchData.playerSymbol);
+    setOpponentId(matchData.opponentId || null);
+    setProcessedResultId(null);
+    setGameStarted(false);
+    setGameMode('online');
+    setOnlineXScore(0);
+    setOnlineOScore(0);
+    setRoundNumber(1);
+
+    // Set player names from match data
+    if (matchData.playerXName) setPlayerXName(matchData.playerXName);
+    if (matchData.playerOName) setPlayerOName(matchData.playerOName);
+
+    if (matchData.roomId && matchData.playerSymbol) {
+      markPlayerReady(matchData.roomId, matchData.playerSymbol);
+    }
+  }, [markPlayerReady]);
+
   useEffect(() => {
     if (!pendingFriendInvite || !user || checkIsGuest(user)) return;
 
@@ -1086,56 +1136,6 @@ function App() {
         equippedBackground: validatedAvatarData.background
       });
       console.log('[Avatar Equip] Successfully saved to Firestore');
-    }
-  };
-
-  const markPlayerReady = async (targetRoomId, symbol) => {
-    if (!targetRoomId || !symbol) return;
-    try {
-      const roomRef = doc(db, 'gameRooms', targetRoomId);
-      await runTransaction(db, async (transaction) => {
-        const snap = await transaction.get(roomRef);
-        if (!snap.exists()) return;
-        const data = snap.data() || {};
-
-        const updates = {};
-        if (symbol === 'X' && data.readyX !== true) updates.readyX = true;
-        if (symbol === 'O' && data.readyO !== true) updates.readyO = true;
-
-        const nextReadyX = updates.readyX !== undefined ? updates.readyX : data.readyX;
-        const nextReadyO = updates.readyO !== undefined ? updates.readyO : data.readyO;
-
-        if (nextReadyX && nextReadyO && data.status !== 'playing') {
-          updates.status = 'playing';
-          updates.startedAt = Date.now();
-        }
-
-        if (Object.keys(updates).length > 0) {
-          transaction.update(roomRef, updates);
-        }
-      });
-    } catch (error) {
-      console.error('Failed to mark player ready:', error);
-    }
-  };
-
-  const handleMatchFound = (matchData) => {
-    setRoomId(matchData.roomId);
-    setPlayerSymbol(matchData.playerSymbol);
-    setOpponentId(matchData.opponentId || null);
-    setProcessedResultId(null);
-    setGameStarted(false);
-    setGameMode('online');
-    setOnlineXScore(0);
-    setOnlineOScore(0);
-    setRoundNumber(1);
-
-    // Set player names from match data
-    if (matchData.playerXName) setPlayerXName(matchData.playerXName);
-    if (matchData.playerOName) setPlayerOName(matchData.playerOName);
-
-    if (matchData.roomId && matchData.playerSymbol) {
-      markPlayerReady(matchData.roomId, matchData.playerSymbol);
     }
   };
 
