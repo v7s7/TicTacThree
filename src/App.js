@@ -481,7 +481,7 @@ function App() {
     });
 
     return () => unsub();
-  }, [pendingFriendInvite, user]);
+  }, [pendingFriendInvite, user, handleMatchFound]);
 
   useEffect(() => {
     if (gameMode !== 'online' || !roomId || !user || checkIsGuest(user)) return;

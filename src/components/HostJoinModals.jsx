@@ -1,7 +1,7 @@
 import React from 'react';
 import { nanoid } from 'nanoid';
 import { db } from '../firebase';
-import { doc, setDoc, getDoc, updateDoc, onSnapshot, runTransaction } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, runTransaction } from 'firebase/firestore';
 
 function HostJoinModals({ showHostModal, showJoinModal, hostRoomId, setHostRoomId, joinRoomId, setJoinRoomId, setRoomId, setPlayerSymbol, setShowHostModal, setShowJoinModal, setOnlineXScore, setOnlineOScore, setGameStarted, setGameMode, user, setPlayerXName, setPlayerOName }) {
 
