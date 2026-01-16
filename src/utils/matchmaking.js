@@ -8,6 +8,7 @@ import {
   getDocs,
   query,
   where,
+  runTransaction,
   onSnapshot,
   deleteDoc,
   serverTimestamp
@@ -27,7 +28,13 @@ export const joinQueue = async (userId, displayName = 'Guest') => {
       displayName,
       joinedAt: serverTimestamp(),
       status: 'searching',
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      roomId: null,
+      assignedSymbol: null,
+      opponentId: null,
+      opponentName: null,
+      playerXName: null,
+      playerOName: null
     });
     return { success: true };
   } catch (error) {
@@ -50,7 +57,10 @@ export const leaveQueue = async (userId) => {
 // Get active players count in queue
 export const getActivePlayersCount = async () => {
   try {
-    const q = query(collection(db, MATCHMAKING_COLLECTION));
+    const q = query(
+      collection(db, MATCHMAKING_COLLECTION),
+      where('status', '==', 'searching')
+    );
     const snapshot = await getDocs(q);
     return snapshot.size;
   } catch (error) {
@@ -61,7 +71,10 @@ export const getActivePlayersCount = async () => {
 
 // Listen to active players count
 export const listenToActivePlayersCount = (callback) => {
-  const q = query(collection(db, MATCHMAKING_COLLECTION));
+  const q = query(
+    collection(db, MATCHMAKING_COLLECTION),
+    where('status', '==', 'searching')
+  );
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.size);
   });
@@ -77,48 +90,97 @@ export const findMatch = async (userId, displayName = 'Guest') => {
     );
     const snapshot = await getDocs(q);
 
-    // Find an opponent
+    // Find the earliest opponent
     let opponent = null;
-    snapshot.forEach((doc) => {
-      if (doc.id !== userId && !opponent) {
-        opponent = { id: doc.id, ...doc.data() };
+    snapshot.forEach((snap) => {
+      if (snap.id === userId) return;
+      const data = snap.data();
+      if (!opponent) {
+        opponent = { id: snap.id, ...data };
+        return;
+      }
+      const opponentTs = typeof opponent.timestamp === 'number' ? opponent.timestamp : 0;
+      const candidateTs = typeof data.timestamp === 'number' ? data.timestamp : 0;
+      if (candidateTs < opponentTs) {
+        opponent = { id: snap.id, ...data };
       }
     });
 
     if (opponent) {
-      // Create game room
       const roomId = nanoid(6).toUpperCase();
       const roomRef = doc(db, ACTIVE_GAMES_COLLECTION, roomId);
+      const userRef = doc(db, MATCHMAKING_COLLECTION, userId);
+      const opponentRef = doc(db, MATCHMAKING_COLLECTION, opponent.id);
 
-      await setDoc(roomRef, {
-        board: Array(9).fill(null),
-        currentPlayer: 'X',
-        playerX: userId,
-        playerO: opponent.id,
-        playerXName: displayName,
-        playerOName: opponent.displayName,
-        status: 'playing',
-        winner: null,
-        private: false,
-        createdAt: Date.now(),
-        playerXMarks: [],
-        playerOMarks: [],
-        markToRemoveIndex: null
+      const transactionResult = await runTransaction(db, async (transaction) => {
+        const userSnap = await transaction.get(userRef);
+        const opponentSnap = await transaction.get(opponentRef);
+
+        if (!userSnap.exists() || !opponentSnap.exists()) return { matched: false };
+        const userData = userSnap.data() || {};
+        const opponentData = opponentSnap.data() || {};
+
+        if (userData.status !== 'searching' || opponentData.status !== 'searching') return { matched: false };
+        if (userData.roomId || opponentData.roomId) return { matched: false };
+
+        transaction.set(roomRef, {
+          board: Array(9).fill(null),
+          currentPlayer: 'X',
+          playerX: userId,
+          playerO: opponent.id,
+          playerXName: displayName,
+          playerOName: opponent.displayName,
+          status: 'waiting',
+          readyX: false,
+          readyO: false,
+          startedAt: null,
+          round: 1,
+          rematchRequested: null,
+          rematchRequestedBy: null,
+          rematchNonce: null,
+          rematchHandled: null,
+          winner: null,
+          private: false,
+          createdAt: Date.now(),
+          playerXMarks: [],
+          playerOMarks: [],
+          markToRemoveIndex: null
+        });
+
+        transaction.update(userRef, {
+          status: 'matched',
+          roomId,
+          assignedSymbol: 'X',
+          opponentId: opponent.id,
+          opponentName: opponent.displayName,
+          playerXName: displayName,
+          playerOName: opponent.displayName
+        });
+
+        transaction.update(opponentRef, {
+          status: 'matched',
+          roomId,
+          assignedSymbol: 'O',
+          opponentId: userId,
+          opponentName: displayName,
+          playerXName: displayName,
+          playerOName: opponent.displayName
+        });
+
+        return { matched: true };
       });
 
-      // Remove both players from queue
-      await deleteDoc(doc(db, MATCHMAKING_COLLECTION, userId));
-      await deleteDoc(doc(db, MATCHMAKING_COLLECTION, opponent.id));
-
-      return {
-        success: true,
-        roomId,
-        opponentId: opponent.id,
-        opponentName: opponent.displayName,
-        playerSymbol: 'X',
-        playerXName: displayName,
-        playerOName: opponent.displayName
-      };
+      if (transactionResult?.matched) {
+        return {
+          success: true,
+          roomId,
+          opponentId: opponent.id,
+          opponentName: opponent.displayName,
+          playerSymbol: 'X',
+          playerXName: displayName,
+          playerOName: opponent.displayName
+        };
+      }
     }
 
     return { success: false, message: 'No opponent found' };
@@ -130,55 +192,52 @@ export const findMatch = async (userId, displayName = 'Guest') => {
 
 // Listen for match found (for the second player)
 export const listenForMatch = (userId, onMatchFound) => {
-  // Check if user was matched by another player
-  // eslint-disable-next-line no-unused-vars
-  const checkForRoom = async () => {
-    try {
-      // Check rooms where user is playerO
-      const q = query(
-        collection(db, ACTIVE_GAMES_COLLECTION),
-        where('playerO', '==', userId),
-        where('status', '==', 'playing')
-      );
-      const snapshot = await getDocs(q);
+  let handled = false;
+  const userRef = doc(db, MATCHMAKING_COLLECTION, userId);
 
-      if (!snapshot.empty) {
-        const roomDoc = snapshot.docs[0];
-        const roomData = roomDoc.data();
-        onMatchFound({
-          roomId: roomDoc.id,
-          opponentId: roomData.playerX,
-          opponentName: roomData.playerXName || 'Opponent',
-          playerSymbol: 'O',
-          playerXName: roomData.playerXName || 'Player X',
-          playerOName: roomData.playerOName || 'Player O'
-        });
+  return onSnapshot(userRef, async (snap) => {
+    if (handled) return;
+    if (!snap.exists()) return;
+
+    const data = snap.data() || {};
+    if (data.status !== 'matched' || !data.roomId) return;
+
+    handled = true;
+    const roomId = data.roomId;
+    const playerSymbol = data.assignedSymbol || 'O';
+    let opponentId = data.opponentId;
+    let opponentName = data.opponentName;
+    let playerXName = data.playerXName;
+    let playerOName = data.playerOName;
+
+    if (!opponentId || !opponentName || !playerXName || !playerOName) {
+      try {
+        const roomSnap = await getDoc(doc(db, ACTIVE_GAMES_COLLECTION, roomId));
+        if (roomSnap.exists()) {
+          const roomData = roomSnap.data() || {};
+          playerXName = roomData.playerXName || playerXName || 'Player X';
+          playerOName = roomData.playerOName || playerOName || 'Player O';
+          opponentId = playerSymbol === 'X' ? roomData.playerO : roomData.playerX;
+          opponentName = playerSymbol === 'X' ? roomData.playerOName : roomData.playerXName;
+        }
+      } catch (error) {
+        console.error('Error fetching room for match:', error);
       }
-    } catch (error) {
-      console.error('Error checking for room:', error);
     }
-  };
 
-  // Listen for changes in rooms collection
-  const q = query(
-    collection(db, ACTIVE_GAMES_COLLECTION),
-    where('playerO', '==', userId)
-  );
+    onMatchFound({
+      roomId,
+      opponentId,
+      opponentName: opponentName || 'Opponent',
+      playerSymbol,
+      playerXName: playerXName || 'Player X',
+      playerOName: playerOName || 'Player O'
+    });
 
-  return onSnapshot(q, (snapshot) => {
-    if (!snapshot.empty) {
-      const roomDoc = snapshot.docs[0];
-      const roomData = roomDoc.data();
-      if (roomData.status === 'playing') {
-        onMatchFound({
-          roomId: roomDoc.id,
-          opponentId: roomData.playerX,
-          opponentName: roomData.playerXName || 'Opponent',
-          playerSymbol: 'O',
-          playerXName: roomData.playerXName || 'Player X',
-          playerOName: roomData.playerOName || 'Player O'
-        });
-      }
+    try {
+      await deleteDoc(userRef);
+    } catch (error) {
+      console.error('Error cleaning up queue doc:', error);
     }
   });
 };
@@ -192,7 +251,7 @@ export const cleanupOldQueueEntries = async () => {
 
     snapshot.forEach((doc) => {
       const data = doc.data();
-      if (data.timestamp && now - data.timestamp > QUEUE_TIMEOUT) {
+      if (data.timestamp && now - data.timestamp > QUEUE_TIMEOUT && data.status === 'searching') {
         deletePromises.push(deleteDoc(doc.ref));
       }
     });

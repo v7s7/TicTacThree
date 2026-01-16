@@ -15,7 +15,7 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
           ...prev,
           board: data.board,
           currentPlayer: data.currentPlayer,
-          gameActive: data.status === 'playing' || data.status === 'full',
+          gameActive: data.status === 'playing',
           showWinModal: data.status === 'finished',
           winMessage: data.winner === 'draw'
             ? "It's a draw!"
