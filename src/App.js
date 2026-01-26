@@ -65,7 +65,8 @@ function App() {
     showRules: false,
     showWinModal: false,
     winMessage: '',
-    lastWinner: null
+    lastWinner: null,
+    turnCount: 0
   });
 
   // Game mode: 'home', 'local', 'bot', 'online', 'matchmaking'
@@ -655,6 +656,9 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.currentPlayer, gameMode, gameState.gameActive, isBotThinking]);
 
+  // Max turns for draw detection (since board can never be full with 3-mark rule)
+  const MAX_TURNS_FOR_DRAW = 50;
+
   const handleBotMove = (index) => {
     if (!gameState.gameActive || gameState.board[index]) return;
 
@@ -686,7 +690,8 @@ function App() {
       }
     }
 
-    const isDraw = !winner && updatedBoard.every(cell => cell !== null);
+    const newTurnCount = (gameState.turnCount || 0) + 1;
+    const isDraw = !winner && newTurnCount >= MAX_TURNS_FOR_DRAW;
 
     if (winner) {
       soundManager.playLoss();
@@ -717,18 +722,26 @@ function App() {
       setStats(getStats());
     }
 
+    // Calculate which mark will be removed on X's (player's) next turn
+    const playerXMarks = gameState.playerXMarks;
+    let nextMarkToRemove = null;
+    if (playerXMarks.length >= 3) {
+      nextMarkToRemove = playerXMarks[0];
+    }
+
     setGameState(prev => ({
       ...prev,
       board: updatedBoard,
       playerOMarks: newPlayerOMarks,
       playerXMarks: prev.playerXMarks,
-      markToRemoveIndex: newPlayerOMarks.length === 3 ? newPlayerOMarks[0] : null,
+      markToRemoveIndex: nextMarkToRemove,
       currentPlayer: 'X',
       gameActive: !winner && !isDraw,
       showWinModal: false, // Don't show immediately
       winMessage: winner ? 'Bot wins!' : isDraw ? "It's a draw!" : '',
       winningLine: winningLine,
-      lastWinner: winner || (isDraw ? 'draw' : null)
+      lastWinner: winner || (isDraw ? 'draw' : null),
+      turnCount: newTurnCount
     }));
 
     // Delay showing modal to let winning line animation play
@@ -763,7 +776,8 @@ function App() {
       showRules: false,
       showWinModal: false,
       winMessage: '',
-      gameActive: true
+      gameActive: true,
+      turnCount: 0
     }));
   };
 
@@ -836,7 +850,8 @@ function App() {
       xScore: newXScore,
       oScore: newOScore,
       currentPlayer: nextStarter,
-      startingPlayer: nextStarter
+      startingPlayer: nextStarter,
+      turnCount: 0
     }));
   };
 
@@ -874,7 +889,8 @@ function App() {
         gameActive: true,
         currentPlayer: nextStarter,
         startingPlayer: nextStarter,
-        lastWinner: null
+        lastWinner: null,
+        turnCount: 0
       }));
     }
   };

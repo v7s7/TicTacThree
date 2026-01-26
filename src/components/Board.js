@@ -4,6 +4,10 @@ import { db } from '../firebase';
 import { doc, onSnapshot, runTransaction } from 'firebase/firestore';
 import { soundManager } from '../utils/soundManager';
 
+// With the 3-mark rule, the board can never be fully filled (max 6 marks on 9 cells)
+// Draws are only possible after many turns without a winner
+const MAX_TURNS_FOR_DRAW = 50; // After 50 total moves, declare draw if no winner
+
 function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGameEnd, playerXName, playerOName, isBotThinking }) {
   useEffect(() => {
     if (!roomId) return;
@@ -11,6 +15,19 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
     const unsubscribe = onSnapshot(roomRef, (docSnap) => {
       const data = docSnap.data();
       if (data) {
+        // Calculate markToRemoveIndex for the CURRENT player (showing what will be removed on their next move)
+        const currentPlayer = data.currentPlayer;
+        const xMarks = data.playerXMarks || [];
+        const oMarks = data.playerOMarks || [];
+
+        // Show the mark that will be removed if current player already has 3 marks
+        let markToRemove = null;
+        if (currentPlayer === 'X' && xMarks.length >= 3) {
+          markToRemove = xMarks[0];
+        } else if (currentPlayer === 'O' && oMarks.length >= 3) {
+          markToRemove = oMarks[0];
+        }
+
         setGameState(prev => ({
           ...prev,
           board: data.board,
@@ -20,9 +37,10 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
           winMessage: data.winner === 'draw'
             ? "It's a draw!"
             : data.winner ? `${data.winner === 'X' ? (playerXName || 'Player X') : (playerOName || 'Player O')} wins!` : '',
-          playerXMarks: data.playerXMarks || [],
-          playerOMarks: data.playerOMarks || [],
-          markToRemoveIndex: data.markToRemoveIndex ?? null
+          playerXMarks: xMarks,
+          playerOMarks: oMarks,
+          markToRemoveIndex: markToRemove,
+          turnCount: data.turnCount || 0
         }));
       }
     });
@@ -36,7 +54,7 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
 
     soundManager.playMove();
 
-    const updateLocalState = (updatedBoard, newPlayerXMarks, newPlayerOMarks) => {
+    const updateLocalState = (updatedBoard, newPlayerXMarks, newPlayerOMarks, turnCount) => {
       const winPatterns = [
         [0,1,2],[3,4,5],[6,7,8],
         [0,3,6],[1,4,7],[2,5,8],
@@ -54,11 +72,21 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
         }
       }
 
-      const isDraw = !winner && updatedBoard.every(cell => cell !== null);
+      // With 3-mark rule, board can never be full. Use turn count for draws.
+      const isDraw = !winner && turnCount >= MAX_TURNS_FOR_DRAW;
 
       // Only call onGameEnd once when game ends
       if (onGameEnd && (winner || isDraw)) {
         onGameEnd(winner, isDraw);
+      }
+
+      // Calculate which mark will be removed on the NEXT player's turn
+      const nextPlayer = gameState.currentPlayer === 'X' ? 'O' : 'X';
+      let nextMarkToRemove = null;
+      if (nextPlayer === 'X' && newPlayerXMarks.length >= 3) {
+        nextMarkToRemove = newPlayerXMarks[0];
+      } else if (nextPlayer === 'O' && newPlayerOMarks.length >= 3) {
+        nextMarkToRemove = newPlayerOMarks[0];
       }
 
       setGameState(prev => ({
@@ -66,11 +94,8 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
         board: updatedBoard,
         playerXMarks: newPlayerXMarks,
         playerOMarks: newPlayerOMarks,
-        markToRemoveIndex:
-          (prev.currentPlayer === 'X' && newPlayerXMarks.length === 3) ? newPlayerXMarks[0] :
-          (prev.currentPlayer === 'O' && newPlayerOMarks.length === 3) ? newPlayerOMarks[0] :
-          null,
-        currentPlayer: prev.currentPlayer === 'X' ? 'O' : 'X',
+        markToRemoveIndex: nextMarkToRemove,
+        currentPlayer: nextPlayer,
         gameActive: !winner && !isDraw,
         showWinModal: false, // Don't show immediately
         winMessage: winner
@@ -79,7 +104,8 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
             : `${winner === 'X' ? (playerXName || 'Player X') : (playerOName || 'Player O')} wins!`
           : isDraw ? "It's a draw!" : '',
         winningLine: winningLine,
-        lastWinner: winner || (isDraw ? 'draw' : null)
+        lastWinner: winner || (isDraw ? 'draw' : null),
+        turnCount: turnCount
       }));
 
       // Delay showing modal to let winning line animation play
@@ -111,7 +137,8 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
         }
       }
 
-      updateLocalState(updatedBoard, newPlayerXMarks, newPlayerOMarks);
+      const newTurnCount = (gameState.turnCount || 0) + 1;
+      updateLocalState(updatedBoard, newPlayerXMarks, newPlayerOMarks, newTurnCount);
       return;
     }
 
@@ -162,19 +189,27 @@ function Board({ gameState, setGameState, playerSymbol, roomId, gameMode, onGame
         }
       }
 
-      const isDraw = updatedBoard.every(cell => cell !== null);
+      const turnCount = (data.turnCount || 0) + 1;
+      const isDraw = !winner && turnCount >= MAX_TURNS_FOR_DRAW;
+
+      // Calculate which mark will be removed on the NEXT player's turn
+      const nextPlayer = playerSymbol === 'X' ? 'O' : 'X';
+      let nextMarkToRemove = null;
+      if (nextPlayer === 'X' && newPlayerXMarks.length >= 3) {
+        nextMarkToRemove = newPlayerXMarks[0];
+      } else if (nextPlayer === 'O' && newPlayerOMarks.length >= 3) {
+        nextMarkToRemove = newPlayerOMarks[0];
+      }
 
       transaction.update(roomRef, {
         board: updatedBoard,
         playerXMarks: newPlayerXMarks,
         playerOMarks: newPlayerOMarks,
-        markToRemoveIndex:
-          (playerSymbol === 'X' && newPlayerXMarks.length === 3) ? newPlayerXMarks[0] :
-          (playerSymbol === 'O' && newPlayerOMarks.length === 3) ? newPlayerOMarks[0] :
-          null,
-        currentPlayer: playerSymbol === 'X' ? 'O' : 'X',
+        markToRemoveIndex: nextMarkToRemove,
+        currentPlayer: nextPlayer,
         status: winner || isDraw ? 'finished' : 'playing',
         winner: winner || (isDraw ? 'draw' : null),
+        turnCount: turnCount
       });
     });
   };
